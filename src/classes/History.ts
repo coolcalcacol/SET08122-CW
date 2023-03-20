@@ -1,160 +1,75 @@
 /** @format */
 
-class HistoryTreeNode {
-	private _id = -1;
-	private state = '';
-	private father: HistoryTreeNode | null = null;
-	private children: HistoryTreeNode[] = [];
-	private activeIndex = -1;
+class HistoryTreeNode<T> {
+	private readonly _value: T;
+	private _parent: HistoryTreeNode<T> | null = null;
+	private _children: HistoryTreeNode<T>[] = [];
 
-	getId(): number {
-		return this._id;
+	constructor(value: T) {
+		this._value = value;
 	}
 
-	setId(id: number): this {
-		this._id = id;
-		return this;
+	get value(): T {
+		return this._value;
 	}
 
-	getState(): string {
-		return this.state;
+	get parent(): HistoryTreeNode<T> | null {
+		return this._parent;
 	}
 
-	setState(state: string): this {
-		this.state = state;
-		return this;
+	get children(): HistoryTreeNode<T>[] {
+		return this._children.slice();
+		// return a copy to prevent direct modification
 	}
 
-	getFather(): HistoryTreeNode | null {
-		return this.father;
-	}
-
-	setFather(father: HistoryTreeNode | null): this {
-		this.father = father;
-		return this;
-	}
-
-	addChild(child: HistoryTreeNode): this {
-		this.children.push(child);
-		this.activeIndex = this.children.length - 1;
-		return this;
-	}
-
-	getChildren(): HistoryTreeNode[] {
-		return this.children;
-	}
-
-	getActiveIndex(): number {
-		return this.activeIndex;
-	}
-
-	setActiveIndex(activeIndex: number): this {
-		this.activeIndex = activeIndex;
-		return this;
-	}
-
-	getActiveNode(): HistoryTreeNode | null {
-		if (this.activeIndex === -1) {
-			return null;
-		}
-		return this.children[this.activeIndex];
-	}
-
-	getStructure(): Record<string, any> {
-		const structure: Record<string, any> = {
-			id: this._id,
-			state: this.state,
-			active: this.activeIndex,
-			father: null,
-			children: [],
-		};
-		if (this.father !== null) {
-			structure.father = this.father.getId();
-		}
-		for (const child of this.children) {
-			structure.children.push(child.getStructure());
-		}
-		return structure;
-	}
-
-	getPath(): number[] {
-		let path: number[] = [];
-		path.push(this._id);
-
-		if (this.activeIndex !== -1) {
-			path = path.concat(this.children[this.activeIndex].getPath());
-		}
-
-		return path;
-	}
-
-	countLeaves(): number {
-		let count = 0;
-		if (this.children.length === 0) {
-			count = 1;
-		} else {
-			for (const child of this.children) {
-				count += child.countLeaves();
-			}
-		}
-		return count;
-	}
-
-	maxDepth(): number {
-		let depth = 1;
-		if (this.children.length !== 0) {
-			let childrenMaxDepth = 1;
-			for (const child of this.children) {
-				const childrenDepth = child.maxDepth();
-				if (childrenDepth > childrenMaxDepth) {
-					childrenMaxDepth = childrenDepth;
-				}
-			}
-			depth += childrenMaxDepth;
-		}
-		return depth;
+	addChild(value: T): HistoryTreeNode<T> {
+		const child = new HistoryTreeNode(value);
+		child._parent = this;
+		this._children.push(child);
+		return child;
 	}
 }
 
-class HistoryTree {
-	private root: HistoryTreeNode | null = null;
-	private activeNode: HistoryTreeNode | null = null;
+export class HistoryTree<T> {
+	private readonly root: HistoryTreeNode<T>;
+	private currentNode: HistoryTreeNode<T>;
+	private undoStack: HistoryTreeNode<T>[] = [];
+	private redoStack: HistoryTreeNode<T>[] = [];
 
-	getRoot(): HistoryTreeNode | null {
-		return this.root;
+	constructor(value: T) {
+		this.root = new HistoryTreeNode(value);
+		this.currentNode = this.root;
 	}
 
-	setRoot(root: HistoryTreeNode): this {
-		this.root = root;
-		this.activeNode = root;
-		return this;
+	get current(): T {
+		return this.currentNode.value;
 	}
 
-	getActiveNode(): HistoryTreeNode | null {
-		return this.activeNode;
+	addChild(value: T): HistoryTreeNode<T> {
+		const child = this.currentNode.addChild(value);
+		this.undoStack.push(this.currentNode);
+		this.currentNode = child;
+		this.redoStack = [];
+		return child;
 	}
 
-	setActiveNode(activeNode: HistoryTreeNode): this {
-		this.activeNode = activeNode;
-		return this;
-	}
-
-	undo(): HistoryTreeNode | null {
-		if (this.activeNode === null || this.activeNode.getFather() === null) {
-			return null;
+	undo(): void {
+		if (this.undoStack.length > 0) {
+			const parent = this.undoStack.pop();
+			if (parent !== undefined) {
+				this.redoStack.push(this.currentNode);
+				this.currentNode = parent;
+			}
 		}
-		this.activeNode = this.activeNode.getFather();
-		return this.activeNode;
 	}
 
-	redo(): HistoryTreeNode | null {
-		if (
-			this.activeNode === null ||
-			this.activeNode.getChildren().length === 0
-		) {
-			return null;
+	redo(): void {
+		if (this.redoStack.length > 0) {
+			const child = this.redoStack.pop();
+			if (child !== undefined) {
+				this.undoStack.push(this.currentNode);
+				this.currentNode = child;
+			}
 		}
-		this.activeNode = this.activeNode.getActiveNode();
-		return this.activeNode;
 	}
 }
