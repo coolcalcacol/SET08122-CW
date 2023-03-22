@@ -16,10 +16,10 @@
     },
     "scripts": {
         "build": "tsc",
-        "lint": "eslint . --ext .ts",
-        "lint:fix": "eslint . --ext .ts --fix",
-        "prettier": "prettier --write .",
-        "prettier:check": "prettier --check .",
+        "lint": "eslint src/ --ext .ts",
+        "lint:fix": "eslint src/ --ext .ts --fix",
+        "prettier": "prettier --write src/**/*",
+        "prettier:check": "prettier --check src/**/*",
         "start": "node dist/index.js",
         "dev": "yarn build && yarn start"
     },

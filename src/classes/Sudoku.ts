@@ -1,5 +1,6 @@
 /** @format */
 
+import fs from 'fs';
 import chalk from 'chalk';
 import {
 	clearLine,
@@ -27,11 +28,26 @@ export enum Difficulty {
 	Hard,
 }
 export default class {
-	private board?: Board;
+	// private previousGames: Game[] = [];
+	private currentBoard?: Board;
 	private difficulty?: Difficulty;
+
 	constructor() {
+		this.readFolder();
 		this.displayStart();
 		this.startGame();
+	}
+
+	private readFolder() {
+		// read folder for saved games
+		if (fs.existsSync('./saves')) {
+			const files = fs.readdirSync('./saves');
+			if (files.length > 0) {
+				for (const file of files) {
+					// dump saved games to previousGames
+				}
+			}
+		}
 	}
 
 	private displayStart() {
@@ -54,11 +70,11 @@ export default class {
 	}
 
 	private startGame() {
-		if (this.board === undefined) this.promptDifficulty();
-		else if (!this.board.solved) {
-			this.promptMove(this.board);
+		if (this.currentBoard === undefined) this.promptDifficulty();
+		else if (!this.currentBoard.solved) {
+			this.promptMove(this.currentBoard);
 		} else {
-			this.displayTable(this.board);
+			this.displayTable(this.currentBoard);
 			console.log(dim(green('Congratulations! You won!')));
 			console.log(black('───────────────────────────────────────'));
 			// game over. Display completed table
@@ -92,7 +108,7 @@ export default class {
 			moveCursor(process.stdout, -3, -1);
 			clearLine(process.stdout, 0);
 			console.log(dim(`Generating "${line}" board...\n`));
-			this.board = Board.generateBoard(this.difficulty);
+			this.currentBoard = Board.generateBoard(this.difficulty);
 			rl.close();
 		})
 			.on('close', () => {
@@ -119,7 +135,8 @@ export default class {
 		console.log(`  ${topRow}`);
 		for (const [i, tableDataRow] of board.board.entries()) {
 			let rowString = `${i + 1} `;
-			for (const [j, number] of tableDataRow.entries()) {
+			for (const [j, str] of tableDataRow.entries()) {
+				const number = parseInt(str);
 				const rowFunc = j % 3 === 0 ? black : gray;
 
 				const numString =
@@ -154,87 +171,43 @@ export default class {
 		rl.on('line', (line) => {
 			const data = line.trim();
 
-			// e.g. "1A 5"
-			if (data.split(' ').length !== 2) {
+			if (data.startsWith('play ')) {
+				failedAttempts = this.placeNumber(
+					board,
+					rl,
+					failedAttempts,
+					data.replace('play ', ''),
+					//append move to move history
+				);
+			} else if (data === 'undo') {
+				// undo last move
+				board.undo();
+				moveCursor(process.stdout, -3, -failedAttempts - 21);
+				clearScreenDown(process.stdout);
+
+				console.log(dim('Undid previous move'));
+				console.log(black('───────────────────────────────────────'));
+				rl.close();
+			} else if (data === 'redo') {
+				// redo last move
+				board.redo();
+				moveCursor(process.stdout, -3, -failedAttempts - 21);
+				clearScreenDown(process.stdout);
+
+				console.log(dim('Redid previous move'));
+				console.log(black('───────────────────────────────────────'));
+				rl.close();
+			} else if (data === 'help') {
+				// display help message
+				console.log('help placeholder');
+				failedAttempts++;
+			} else {
 				failedAttempts = this.badAttempt(
 					rl,
-					'Coordinate and number not recognized. Try again.',
+					'Invalid command supplied. Try again.',
 					failedAttempts,
 				);
-				return;
 			}
-
-			const [position, number] = data.split(' ');
-
-			if (position.length !== 2) {
-				failedAttempts = this.badAttempt(
-					rl,
-					'Invalid coordinates supplied. Try again.',
-					failedAttempts,
-				);
-				return;
-			}
-
-			let row;
-			if ((row = position.match(/[1-9]/)) === null) {
-				failedAttempts = this.badAttempt(
-					rl,
-					'Cannot extract row number from input. Try again.',
-					failedAttempts,
-				);
-				return;
-			}
-			const col =
-				position.split(row[0]).join('').toUpperCase().charCodeAt(0) -
-				65;
-			row = parseInt(row[0]) - 1;
-
-			if (
-				isNaN(parseInt(number)) ||
-				parseInt(number) < 1 ||
-				parseInt(number) > 9
-			) {
-				failedAttempts = this.badAttempt(
-					rl,
-					'Invalid number received. Try again.',
-					failedAttempts,
-				);
-				return;
-			}
-
-			if (board.initialBoard[row][col] !== 0) {
-				failedAttempts = this.badAttempt(
-					rl,
-					'That is a generated value, it cannot be changed. Try again.',
-					failedAttempts,
-				);
-				return;
-			}
-			const existingNumber = board.board[row][col];
-			board.board[row][col] = parseInt(number);
-			if (!Board.isValid(board.board)) {
-				board.board[row][col] = existingNumber;
-				failedAttempts = this.badAttempt(
-					rl,
-					'That is an invalid move. Try again.',
-					failedAttempts,
-				);
-				return;
-			}
-			board.history.push({ x: row, y: col, val: parseInt(number) });
-
-			moveCursor(process.stdout, -3, -failedAttempts - 21);
-			clearScreenDown(process.stdout);
-			console.log(
-				dim('Played ') +
-					blueBright(number) +
-					dim(' at ') +
-					blue(String.fromCharCode(col + 65) + (row + 1)) +
-					dim('.'),
-			);
-			console.log(black('───────────────────────────────────────'));
-
-			rl.close();
 		})
 			.on('close', () => {
 				return this.startGame();
@@ -242,6 +215,98 @@ export default class {
 			.on('SIGINT', () => {
 				rl.pause();
 			});
+	}
+
+	private placeNumber(
+		board: Board,
+		rl: Interface,
+		failedAttempts: number,
+		data: string,
+	): number {
+		// e.g. "1A 5"
+		if (data.split(' ').length !== 2) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Coordinate and number not recognized. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		const [position, number] = data.split(' ');
+
+		if (position.length !== 2) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Invalid coordinates supplied. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		let row;
+		if ((row = position.match(/[1-9]/)) === null) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Cannot extract row number from input. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+		const col =
+			position.split(row[0]).join('').toUpperCase().charCodeAt(0) - 65;
+		row = parseInt(row[0]) - 1;
+
+		if (
+			isNaN(parseInt(number)) ||
+			parseInt(number) < 1 ||
+			parseInt(number) > 9
+		) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Invalid number received. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		if (board.initialBoard[row][col] !== 0) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'That is a generated value, it cannot be changed. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		const currentBoard = board.board.map((row) =>
+			row.map((val) => parseInt(val)),
+		);
+		currentBoard[row][col] = parseInt(number);
+		if (!Board.isValid(currentBoard)) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'That is an invalid move. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		board.move(row, col, number);
+
+		moveCursor(process.stdout, -3, -failedAttempts - 21);
+		clearScreenDown(process.stdout);
+		console.log(
+			dim('Played ') +
+				blueBright(number) +
+				dim(' at ') +
+				blue(String.fromCharCode(col + 65) + (row + 1)) +
+				dim('.'),
+		);
+		console.log(black('───────────────────────────────────────'));
+
+		rl.close();
+		return failedAttempts;
 	}
 
 	private badAttempt(

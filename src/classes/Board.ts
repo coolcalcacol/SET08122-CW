@@ -1,5 +1,6 @@
 /** @format */
 import { Difficulty } from './Sudoku.js';
+import { HistoryTree } from './History.js';
 
 // Sudoku Grid
 
@@ -15,28 +16,66 @@ const isSafe = (i: number, j: number, num: number) =>
 
 export default class Board {
 	// store the current state of the board
-	private _board: number[][];
-
-	public history: { x: number; y: number; val: number }[] = [];
+	private history: HistoryTree<string[]>;
 
 	// store the initial board, so we can reset to it, and colour the original numbers a different colour to the user inputted ones.
 	public readonly initialBoard: number[][];
 	constructor(board: number[][]) {
-		this._board = JSON.parse(JSON.stringify(board));
+		this.history = new HistoryTree<string[]>(
+			board.map((row) => row.join('')),
+		);
 		this.initialBoard = JSON.parse(JSON.stringify(board));
 	}
 
-	get board(): number[][] {
-		return this._board;
-	}
-
-	set board(board: number[][]) {
-		this.history.push(JSON.parse(JSON.stringify(board)));
-		this._board = board;
+	get board(): string[][] {
+		return this.history.current.map((row) => row.split(''));
 	}
 
 	get solved(): boolean {
-		return this.board.every((row) => row.every((cell) => cell !== 0));
+		return this.board.every((row) =>
+			row.every((cell) => parseInt(cell) !== 0),
+		);
+	}
+
+	move(i: number, j: number, num: string): void {
+		const board = this.board;
+		board[i][j] = num;
+		this.history.addChild(board.map((row) => row.join('')));
+	}
+
+	undo(): void {
+		this.history.undo();
+	}
+
+	redo(): void {
+		this.history.redo();
+	}
+
+	public static isValid(board: number[][]): boolean {
+		for (let i = 0; i < board.length; i++) {
+			const row = new Set(),
+				col = new Set(),
+				box = new Set();
+			for (let j = 0; j < board[i].length; j++) {
+				const _row = board[i][j];
+				const _col = board[j][i];
+				const _box = board[getBox(i, j)][3 * (i % 3) + (j % 3)];
+
+				if (_row !== 0) {
+					if (row.has(_row)) return false;
+					row.add(_row);
+				}
+				if (_col !== 0) {
+					if (col.has(_col)) return false;
+					col.add(_col);
+				}
+				if (_box !== 0) {
+					if (box.has(_box)) return false;
+					box.add(_box);
+				}
+			}
+		}
+		return true;
 	}
 
 	private static solveBoard(
@@ -77,33 +116,6 @@ export default class Board {
 		}
 
 		return false;
-	}
-
-	public static isValid(board: number[][]): boolean {
-		for (let i = 0; i < board.length; i++) {
-			const row = new Set(),
-				col = new Set(),
-				box = new Set();
-			for (let j = 0; j < board[i].length; j++) {
-				const _row = board[i][j];
-				const _col = board[j][i];
-				const _box = board[getBox(i, j)][3 * (i % 3) + (j % 3)];
-
-				if (_row !== 0) {
-					if (row.has(_row)) return false;
-					row.add(_row);
-				}
-				if (_col !== 0) {
-					if (col.has(_col)) return false;
-					col.add(_col);
-				}
-				if (_box !== 0) {
-					if (box.has(_box)) return false;
-					box.add(_box);
-				}
-			}
-		}
-		return true;
 	}
 
 	private static makePuzzle(board: number[][], level: Difficulty): void {
