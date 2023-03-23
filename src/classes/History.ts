@@ -1,9 +1,14 @@
 /** @format */
 
+import { randomUUID } from 'crypto';
+import { Structure } from '../interfaces/Structure.js';
+
 class HistoryTreeNode<T> {
+	private readonly _id = randomUUID();
 	private readonly _value: T;
 	private _parent: HistoryTreeNode<T> | null = null;
 	private _children: HistoryTreeNode<T>[] = [];
+	public activeIndex = -1;
 
 	constructor(value: T) {
 		this._value = value;
@@ -22,10 +27,21 @@ class HistoryTreeNode<T> {
 		// return a copy to prevent direct modification
 	}
 
+	get structure(): Structure<T> {
+		return {
+			_id: this._id,
+			value: this._value,
+			parent: this._parent?._id ?? null,
+			activeChild: this.activeIndex,
+			children: this._children.map((child) => child.structure),
+		};
+	}
+
 	addChild(value: T): HistoryTreeNode<T> {
 		const child = new HistoryTreeNode(value);
 		child._parent = this;
 		this._children.push(child);
+		this.activeIndex = this.children.length - 1;
 		return child;
 	}
 }
@@ -33,8 +49,6 @@ class HistoryTreeNode<T> {
 export class HistoryTree<T> {
 	private readonly root: HistoryTreeNode<T>;
 	private currentNode: HistoryTreeNode<T>;
-	private undoStack: HistoryTreeNode<T>[] = [];
-	private redoStack: HistoryTreeNode<T>[] = [];
 
 	constructor(value: T) {
 		this.root = new HistoryTreeNode(value);
@@ -45,31 +59,36 @@ export class HistoryTree<T> {
 		return this.currentNode.value;
 	}
 
+	get structure(): Structure<T> {
+		return this.root.structure;
+	}
+
 	addChild(value: T): HistoryTreeNode<T> {
 		const child = this.currentNode.addChild(value);
-		this.undoStack.push(this.currentNode);
 		this.currentNode = child;
-		this.redoStack = [];
 		return child;
 	}
 
 	undo(): void {
-		if (this.undoStack.length > 0) {
-			const parent = this.undoStack.pop();
-			if (parent !== undefined) {
-				this.redoStack.push(this.currentNode);
-				this.currentNode = parent;
-			}
+		if (this.currentNode.parent === null) {
+			throw new Error('No parent to undo to');
+			// Can't undo. Fail?
+		} else {
+			// put current node in the end.
+			this.currentNode.parent.activeIndex = -1;
+
+			this.currentNode = this.currentNode.parent;
 		}
 	}
 
 	redo(): void {
-		if (this.redoStack.length > 0) {
-			const child = this.redoStack.pop();
-			if (child !== undefined) {
-				this.undoStack.push(this.currentNode);
-				this.currentNode = child;
-			}
+		if (this.currentNode.children.length === 0) {
+			throw new Error('No children to redo to');
+			// Can't redo. Fail?
+		} else {
+			const index = this.currentNode.children.length - 1;
+			this.currentNode.activeIndex = index;
+			this.currentNode = this.currentNode.children[index];
 		}
 	}
 }
