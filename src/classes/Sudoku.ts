@@ -56,6 +56,14 @@ export default class {
 		}
 	}
 
+	private writeGame(structure: Structure<string[]>) {
+		// write folder for saved games
+		fs.writeFileSync(
+			`./saves/${structure._id}.json`,
+			JSON.stringify(structure),
+		);
+	}
+
 	private displayStart() {
 		console.log(black('───────────────────────────────────────'));
 		console.log(green(' Welcome to Sudoku!'));
