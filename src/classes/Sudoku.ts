@@ -14,9 +14,10 @@ import { Structure } from '../interfaces/Structure.js';
 import { HistoryTree } from './History.js';
 
 const {
-	black: black,
-	blackBright: gray,
+	black,
+	blackBright,
 	green,
+	greenBright,
 	dim,
 	blue,
 	blueBright,
@@ -24,6 +25,8 @@ const {
 	yellow,
 } = chalk;
 
+const DEFAULT_PROMPT = dim('sudoku> ');
+const DEFAULT_DIVIDER = black('───────────────────────────────────────');
 export enum Difficulty {
 	Easy,
 	Medium,
@@ -68,9 +71,9 @@ export default class {
 	}
 
 	private displayStart() {
-		console.log(black('───────────────────────────────────────'));
+		console.log(DEFAULT_DIVIDER);
 		console.log(green(' Welcome to Sudoku!'));
-		console.log(black('───────────────────────────────────────'));
+		console.log(DEFAULT_DIVIDER);
 		console.log(dim('INSTRUCTIONS:\n'));
 		console.log(
 			dim(
@@ -79,11 +82,11 @@ export default class {
 		);
 		console.log(
 			dim('For example, to place a 5 in the top left corner, type "') +
-				blueBright('1A 5') +
+				blueBright('play 1A 5') +
 				dim('".'),
 		);
 		// output instructions here
-		console.log(black('───────────────────────────────────────'));
+		console.log(DEFAULT_DIVIDER);
 	}
 
 	private startGame() {
@@ -92,9 +95,8 @@ export default class {
 			this.promptMove(this.currentBoard);
 		} else {
 			this.displayTable(this.currentBoard);
-			console.log(dim(green('Congratulations! You won!')));
-			console.log(black('───────────────────────────────────────'));
-			// game over. Display completed table
+			console.log(dim(greenBright('Congratulations! You won!')));
+			console.log(DEFAULT_DIVIDER);
 		}
 	}
 
@@ -104,7 +106,7 @@ export default class {
 		console.log(dim('Choose a difficulty:'));
 		console.log(`${green('easy')}, ${yellow('normal')}, ${red('hard')}`);
 
-		rl.setPrompt(dim('> '));
+		rl.setPrompt(DEFAULT_PROMPT);
 		rl.prompt();
 
 		rl.on('line', (line) => {
@@ -119,11 +121,11 @@ export default class {
 					this.difficulty = Difficulty.Hard;
 					break;
 				default:
+					line = 'medium';
 					this.difficulty = Difficulty.Medium;
 					break;
 			}
-			moveCursor(process.stdout, -3, -1);
-			clearLine(process.stdout, 0);
+			this.resetLine();
 			console.log(dim(`Generating "${line}" board...\n`));
 			this.currentBoard = Board.generateBoard(this.difficulty);
 			rl.close();
@@ -139,22 +141,27 @@ export default class {
 		const topRow = black('┌───┬───┬───┬───┬───┬───┬───┬───┬───┐'),
 			middleRowMinor =
 				black('├') +
-				gray('───┼───┼───') +
+				blackBright('───┼───┼───') +
 				black('┼') +
-				gray('───┼───┼───') +
+				blackBright('───┼───┼───') +
 				black('┼') +
-				gray('───┼───┼───') +
+				blackBright('───┼───┼───') +
 				black('┤'),
 			middleRowMajor = black('├───┼───┼───┼───┼───┼───┼───┼───┼───┤'),
 			bottomRow = black('└───┴───┴───┴───┴───┴───┴───┴───┴───┘');
 
 		console.log(`    A   B   C   D   E   F   G   H   I`);
 		console.log(`  ${topRow}`);
+
+		const usedNumbers = Array.from(Array(9).fill(0));
+
 		for (const [i, tableDataRow] of board.board.entries()) {
 			let rowString = `${i + 1} `;
 			for (const [j, str] of tableDataRow.entries()) {
 				const number = parseInt(str);
-				const rowFunc = j % 3 === 0 ? black : gray;
+				usedNumbers[number - 1]++;
+
+				const rowFunc = j % 3 === 0 ? black : blackBright;
 
 				const numString =
 					number === 0
@@ -173,6 +180,61 @@ export default class {
 			console.log(rowString);
 		}
 		console.log(`  ${bottomRow}`);
+		console.log(dim(`for help type "${blueBright('help')}"`));
+		console.log(DEFAULT_DIVIDER);
+		// TODO: Reword?
+		console.log(dim(`${blueBright('blue')} - all ${red('red')} `));
+		console.log(
+			usedNumbers.reduce(
+				(t, n, i) => t + `${(n === 9 ? blue : black)(`${i + 1}`)}   `,
+				'    ',
+			),
+		);
+		console.log(DEFAULT_DIVIDER);
+	}
+
+	private displayHelp(
+		rl: Interface,
+		args: string[],
+		failedAttempts: number,
+	): number {
+		this.resetLine();
+		if (args.length > 0) {
+			// TODO: Add help for specific commands
+			rl.prompt();
+			return failedAttempts;
+		} else {
+			console.log(`Help Message - ${dim('Commands:')}`);
+			console.log(
+				`  ${blueBright('help')} - Display this help message\n` +
+					`  ${blueBright('undo')} - Undo the latest move\n` +
+					`  ${blueBright('redo')} - Redo a move undone by undo\n` +
+					`  ${blueBright('play')} - Play a move\n`,
+			);
+			console.log(
+				dim(
+					`Type '${greenBright(
+						'help <command>',
+					)}' for more information on a specific command.`,
+				),
+			);
+			console.log(DEFAULT_DIVIDER);
+
+			rl.prompt();
+
+			return failedAttempts + 8;
+		}
+	}
+
+	private resetCursor(inputLength: number): void {
+		const DISPLAY_TABLE_HEIGHT = 26;
+		moveCursor(process.stdout, -3, -inputLength - DISPLAY_TABLE_HEIGHT);
+		clearScreenDown(process.stdout);
+	}
+
+	private resetLine(): void {
+		moveCursor(process.stdout, -3, -1);
+		clearLine(process.stdout, 0);
 	}
 
 	private promptMove(board: Board): void {
@@ -182,7 +244,7 @@ export default class {
 
 		const rl = createInterface(process.stdin, process.stdout);
 
-		rl.setPrompt(dim('> '));
+		rl.setPrompt(DEFAULT_PROMPT);
 		rl.prompt();
 
 		rl.on('line', (line) => {
@@ -194,30 +256,42 @@ export default class {
 					rl,
 					failedAttempts,
 					data.replace('play ', ''),
-					//append move to move history
 				);
 			} else if (data === 'undo') {
-				// undo last move
-				board.undo();
-				moveCursor(process.stdout, -3, -failedAttempts - 21);
-				clearScreenDown(process.stdout);
+				if (board.undo()) {
+					this.resetCursor(failedAttempts);
 
-				console.log(dim('Undid previous move'));
-				console.log(black('───────────────────────────────────────'));
-				rl.close();
+					console.log(dim('Undid previous move'));
+					console.log(DEFAULT_DIVIDER);
+					rl.close();
+				} else {
+					failedAttempts = this.badAttempt(
+						rl,
+						'Cannot undo any further',
+						failedAttempts,
+					);
+				}
 			} else if (data === 'redo') {
-				// redo last move
-				board.redo();
-				moveCursor(process.stdout, -3, -failedAttempts - 21);
-				clearScreenDown(process.stdout);
+				if (board.redo()) {
+					this.resetCursor(failedAttempts);
 
-				console.log(dim('Redid previous move'));
-				console.log(black('───────────────────────────────────────'));
-				rl.close();
-			} else if (data === 'help') {
-				// display help message
-				console.log('help placeholder');
-				failedAttempts++;
+					console.log(dim('Redid previous move'));
+					console.log(DEFAULT_DIVIDER);
+					rl.close();
+				} else {
+					failedAttempts = this.badAttempt(
+						rl,
+						'Cannot redo any further',
+						failedAttempts,
+					);
+				}
+			} else if (data === 'help' || data.startsWith('help ')) {
+				const parsedData = data.split('help ').slice(1);
+				failedAttempts = this.displayHelp(
+					rl,
+					parsedData,
+					failedAttempts,
+				);
 			} else {
 				failedAttempts = this.badAttempt(
 					rl,
@@ -311,8 +385,7 @@ export default class {
 
 		board.move(row, col, number);
 
-		moveCursor(process.stdout, -3, -failedAttempts - 21);
-		clearScreenDown(process.stdout);
+		this.resetCursor(failedAttempts);
 		console.log(
 			dim('Played ') +
 				blueBright(number) +
@@ -320,7 +393,7 @@ export default class {
 				blue(String.fromCharCode(col + 65) + (row + 1)) +
 				dim('.'),
 		);
-		console.log(black('───────────────────────────────────────'));
+		console.log(DEFAULT_DIVIDER);
 
 		rl.close();
 		return failedAttempts;
@@ -331,8 +404,7 @@ export default class {
 		message: string,
 		failedAttempts: number,
 	): number {
-		moveCursor(process.stdout, -3, -1);
-		clearLine(process.stdout, 0);
+		this.resetLine();
 		console.log(dim(red(message)));
 		rl.prompt();
 
