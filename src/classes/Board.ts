@@ -1,6 +1,7 @@
 /** @format */
 import { Difficulty } from './Sudoku.js';
 import { HistoryTree } from './History.js';
+import { Structure } from '../interfaces/Structure.js';
 
 // Sudoku Grid
 
@@ -49,6 +50,10 @@ export default class Board {
 
 	redo(): boolean {
 		return this.history.redo();
+	}
+
+	get structure(): Structure<string[]> {
+		return this.history.structure;
 	}
 
 	public static isValid(board: number[][]): boolean {

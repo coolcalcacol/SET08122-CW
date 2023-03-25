@@ -97,6 +97,7 @@ export default class {
 			this.displayTable(this.currentBoard);
 			console.log(dim(greenBright('Congratulations! You won!')));
 			console.log(DEFAULT_DIVIDER);
+			this.writeGame(this.currentBoard.structure);
 		}
 	}
 
