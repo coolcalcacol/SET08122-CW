@@ -43,12 +43,12 @@ export default class Board {
 		this.history.addChild(board.map((row) => row.join('')));
 	}
 
-	undo(): void {
-		this.history.undo();
+	undo(): boolean {
+		return this.history.undo();
 	}
 
-	redo(): void {
-		this.history.redo();
+	redo(): boolean {
+		return this.history.redo();
 	}
 
 	public static isValid(board: number[][]): boolean {
@@ -179,9 +179,7 @@ export default class Board {
 	}
 }
 
-// example board
-
-// const board = [
+// example board is [
 // 	[0, 7, 2, 0, 3, 1, 9, 0, 0],
 // 	[8, 0, 0, 0, 0, 9, 0, 5, 7],
 // 	[5, 0, 0, 8, 2, 0, 0, 1, 0],
