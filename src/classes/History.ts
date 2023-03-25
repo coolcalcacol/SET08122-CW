@@ -4,14 +4,15 @@ import { randomUUID } from 'crypto';
 import { Structure } from '../interfaces/Structure.js';
 
 class HistoryTreeNode<T> {
-	private readonly _id = randomUUID();
+	private readonly _id: string;
 	private readonly _value: T;
 	private _parent: HistoryTreeNode<T> | null = null;
 	private _children: HistoryTreeNode<T>[] = [];
 	public activeIndex = -1;
 
-	constructor(value: T) {
+	constructor(value: T, id?: string) {
 		this._value = value;
+		this._id = id ?? randomUUID();
 	}
 
 	get value(): T {
@@ -44,14 +45,28 @@ class HistoryTreeNode<T> {
 		this.activeIndex = this.children.length - 1;
 		return child;
 	}
+
+	addChildrenFromStructure(children: Structure<T>[]): void {
+		for (const child of children) {
+			const node = HistoryTreeNode.fromStructure(child);
+			node._parent = this;
+			this._children.push(node);
+		}
+	}
+	static fromStructure<T>(structure: Structure<T>): HistoryTreeNode<T> {
+		const node = new HistoryTreeNode(structure.value, structure._id);
+		node.addChildrenFromStructure(structure.children);
+		node.activeIndex = structure.activeChild;
+		return node;
+	}
 }
 
 export class HistoryTree<T> {
 	private readonly root: HistoryTreeNode<T>;
 	private currentNode: HistoryTreeNode<T>;
 
-	constructor(value: T) {
-		this.root = new HistoryTreeNode(value);
+	constructor(value: T, id?: string) {
+		this.root = new HistoryTreeNode(value, id || undefined);
 		this.currentNode = this.root;
 	}
 
@@ -90,5 +105,13 @@ export class HistoryTree<T> {
 			this.currentNode.activeIndex = index;
 			this.currentNode = this.currentNode.children[index];
 		}
+	}
+
+	static fromStructure<T>(structure: Structure<T>): HistoryTree<T> {
+		const tree = new HistoryTree(structure.value, structure._id);
+		tree.root.activeIndex = structure.activeChild;
+		tree.root.addChildrenFromStructure(structure.children);
+		tree.currentNode = tree.root;
+		return tree;
 	}
 }
