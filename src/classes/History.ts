@@ -84,27 +84,23 @@ export class HistoryTree<T> {
 		return child;
 	}
 
-	undo(): void {
-		if (this.currentNode.parent === null) {
-			throw new Error('No parent to undo to');
-			// Can't undo. Fail?
-		} else {
-			// put current node in the end.
-			this.currentNode.parent.activeIndex = -1;
+	undo(): boolean {
+		if (this.currentNode.parent === null) return false;
 
-			this.currentNode = this.currentNode.parent;
-		}
+		// reset currentNode parent's active index to -1, and set currentNode to its parent.
+		this.currentNode.parent.activeIndex = -1;
+		this.currentNode = this.currentNode.parent;
+		return true;
 	}
 
-	redo(): void {
-		if (this.currentNode.children.length === 0) {
-			throw new Error('No children to redo to');
-			// Can't redo. Fail?
-		} else {
-			const index = this.currentNode.children.length - 1;
-			this.currentNode.activeIndex = index;
-			this.currentNode = this.currentNode.children[index];
-		}
+	redo(): boolean {
+		if (this.currentNode.children.length === 0) return false;
+
+		// set currentNode's active index to the last child, and set currentNode to that child.
+		const index = this.currentNode.children.length - 1;
+		this.currentNode.activeIndex = index;
+		this.currentNode = this.currentNode.children[index];
+		return true;
 	}
 
 	static fromStructure<T>(structure: Structure<T>): HistoryTree<T> {
