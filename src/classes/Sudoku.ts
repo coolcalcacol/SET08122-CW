@@ -10,6 +10,8 @@ import {
 	Interface,
 } from 'readline';
 import Board from './Board.js';
+import { Structure } from '../interfaces/Structure.js';
+import { HistoryTree } from './History.js';
 
 const {
 	black: black,
