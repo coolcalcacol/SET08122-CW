@@ -28,7 +28,7 @@ export enum Difficulty {
 	Hard,
 }
 export default class {
-	// private previousGames: Game[] = [];
+	private previousGames: HistoryTree<string[]>[] = [];
 	private currentBoard?: Board;
 	private difficulty?: Difficulty;
 
@@ -44,9 +44,15 @@ export default class {
 			const files = fs.readdirSync('./saves');
 			if (files.length > 0) {
 				for (const file of files) {
-					// dump saved games to previousGames
+					const structure = JSON.parse(file) as Structure<string[]>;
+
+					this.previousGames.push(
+						HistoryTree.fromStructure(structure),
+					);
 				}
 			}
+		} else {
+			fs.mkdirSync('./saves');
 		}
 	}
 
