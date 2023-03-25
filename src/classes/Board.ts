@@ -123,20 +123,32 @@ export default class Board {
 		return false;
 	}
 
-	private static makePuzzle(board: number[][], level: Difficulty): void {
-		const max = {
-			[Difficulty.Easy]: 40,
-			[Difficulty.Medium]: 32,
-			[Difficulty.Hard]: 28,
-		};
-		const min = {
-			[Difficulty.Easy]: 35,
-			[Difficulty.Medium]: 30,
-			[Difficulty.Hard]: 23,
-		};
+	private static getBlanks(level: Difficulty | number) {
+		if (typeof level === 'number') {
+			return 81 - level;
+		} else {
+			const max = {
+				[Difficulty.Easy]: 40,
+				[Difficulty.Medium]: 32,
+				[Difficulty.Hard]: 28,
+			};
+			const min = {
+				[Difficulty.Easy]: 35,
+				[Difficulty.Medium]: 30,
+				[Difficulty.Hard]: 23,
+			};
 
-		const numberOfSquares =
-			Math.floor(Math.random() * (max[level] - min[level])) + max[level];
+			return (
+				Math.floor(Math.random() * (max[level] - min[level])) +
+				max[level]
+			);
+		}
+	}
+	private static makePuzzle(
+		board: number[][],
+		level: Difficulty | number,
+	): void {
+		const numberOfSquares = this.getBlanks(level);
 
 		let preTotal = board.reduce(
 			(p, c) => p + c.filter((v) => v !== 0).length,
@@ -154,7 +166,7 @@ export default class Board {
 			}
 		}
 	}
-	static generateBoard(level: Difficulty): Board {
+	static generateBoard(level: Difficulty | number): Board {
 		// generate a board with a certain number of unsolved squares
 		const board = Array.from(Array(9), () => Array(9).fill(0));
 

@@ -28,14 +28,14 @@ const {
 const DEFAULT_PROMPT = dim('sudoku> ');
 const DEFAULT_DIVIDER = black('───────────────────────────────────────');
 export enum Difficulty {
-	Easy,
-	Medium,
-	Hard,
+	Easy = 'Easy',
+	Medium = 'Medium',
+	Hard = 'Hard',
 }
 export default class {
 	private previousGames: HistoryTree<string[]>[] = [];
 	private currentBoard?: Board;
-	private difficulty?: Difficulty;
+	private difficulty?: Difficulty | number;
 
 	constructor() {
 		this.readFolder();
@@ -77,7 +77,7 @@ export default class {
 		console.log(dim('INSTRUCTIONS:\n'));
 		console.log(
 			dim(
-				'To place a number, first type the row number, then the column letter, then the number you want to place.',
+				'To place a number, first type "play", type the row number, then the column letter, then the number you want to place.',
 			),
 		);
 		console.log(
@@ -106,6 +106,9 @@ export default class {
 
 		console.log(dim('Choose a difficulty:'));
 		console.log(`${green('easy')}, ${yellow('normal')}, ${red('hard')}`);
+		console.log(
+			"Or type 'custom' followed by a number to generate a custom board.",
+		);
 
 		rl.setPrompt(DEFAULT_PROMPT);
 		rl.prompt();
@@ -122,8 +125,16 @@ export default class {
 					this.difficulty = Difficulty.Hard;
 					break;
 				default:
-					line = 'medium';
-					this.difficulty = Difficulty.Medium;
+					if (line.startsWith('custom ')) {
+						const customDifficulty = Number(line.split(' ')[1]);
+						if (customDifficulty) {
+							this.difficulty = customDifficulty;
+							break;
+						}
+					}
+					//TODO: Review if this should error, or prompt again with error.
+					console.log(dim('Invalid difficulty. Defaulting to Easy.'));
+					this.difficulty = Difficulty.Easy;
 					break;
 			}
 			this.resetLine();
@@ -183,11 +194,14 @@ export default class {
 		console.log(`  ${bottomRow}`);
 		console.log(dim(`for help type "${blueBright('help')}"`));
 		console.log(DEFAULT_DIVIDER);
-		// TODO: Reword?
-		console.log(dim(`${blueBright('blue')} - all ${red('red')} `));
+		console.log(dim(`${blueBright('blue')} - can still be used`));
+		console.log(
+			dim(`${blackBright('grey')} - all values for this number are used`),
+		);
 		console.log(
 			usedNumbers.reduce(
-				(t, n, i) => t + `${(n === 9 ? blue : black)(`${i + 1}`)}   `,
+				(t, n, i) =>
+					t + `${(n === 9 ? blackBright : blue)(`${i + 1}`)}   `,
 				'    ',
 			),
 		);
@@ -228,7 +242,7 @@ export default class {
 	}
 
 	private resetCursor(inputLength: number): void {
-		const DISPLAY_TABLE_HEIGHT = 26;
+		const DISPLAY_TABLE_HEIGHT = 27;
 		moveCursor(process.stdout, -3, -inputLength - DISPLAY_TABLE_HEIGHT);
 		clearScreenDown(process.stdout);
 	}
@@ -309,24 +323,12 @@ export default class {
 			});
 	}
 
-	private placeNumber(
-		board: Board,
+	private extractRowColAndNumber(
+		position: string,
+		number: string,
 		rl: Interface,
 		failedAttempts: number,
-		data: string,
-	): number {
-		// e.g. "1A 5"
-		if (data.split(' ').length !== 2) {
-			failedAttempts = this.badAttempt(
-				rl,
-				'Coordinate and number not recognized. Try again.',
-				failedAttempts,
-			);
-			return failedAttempts;
-		}
-
-		const [position, number] = data.split(' ');
-
+	): [number, number, number] | number {
 		if (position.length !== 2) {
 			failedAttempts = this.badAttempt(
 				rl,
@@ -362,6 +364,65 @@ export default class {
 			return failedAttempts;
 		}
 
+		return [row, col, parseInt(number)];
+	}
+	private placeNumber(
+		board: Board,
+		rl: Interface,
+		failedAttempts: number,
+		data: string,
+	): number {
+		// e.g. "1A 5"
+
+		const splitData = data.split(' ');
+
+		if (splitData.length !== 2) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Coordinate and number not recognized. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		const scenario1 =
+			splitData[0].length === 2 && splitData[1].length === 1;
+		const scenario2 =
+			splitData[0].length === 1 && splitData[1].length === 2;
+
+		if (!scenario1 && !scenario2) {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Coordinate and number not recognized. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		let v: [string, string];
+		if (scenario1) {
+			v = [splitData[0], splitData[1]];
+		} else if (scenario2) {
+			v = [splitData[1], splitData[0]];
+		} else {
+			failedAttempts = this.badAttempt(
+				rl,
+				'Coordinate and number not recognized. Try again.',
+				failedAttempts,
+			);
+			return failedAttempts;
+		}
+
+		const rowColAndNumber = this.extractRowColAndNumber(
+			...v,
+			rl,
+			failedAttempts,
+		);
+		if (typeof rowColAndNumber === 'number') {
+			return rowColAndNumber;
+		}
+		const [row, col, number] = rowColAndNumber;
+
 		if (board.initialBoard[row][col] !== 0) {
 			failedAttempts = this.badAttempt(
 				rl,
@@ -374,7 +435,7 @@ export default class {
 		const currentBoard = board.board.map((row) =>
 			row.map((val) => parseInt(val)),
 		);
-		currentBoard[row][col] = parseInt(number);
+		currentBoard[row][col] = number;
 		if (!Board.isValid(currentBoard)) {
 			failedAttempts = this.badAttempt(
 				rl,
@@ -384,7 +445,7 @@ export default class {
 			return failedAttempts;
 		}
 
-		board.move(row, col, number);
+		board.move(row, col, `${number}`);
 
 		this.resetCursor(failedAttempts);
 		console.log(
