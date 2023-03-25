@@ -42,14 +42,15 @@ export default class {
 		// read folder for saved games
 		if (fs.existsSync('./saves')) {
 			const files = fs.readdirSync('./saves');
-			if (files.length > 0) {
-				for (const file of files) {
-					const structure = JSON.parse(file) as Structure<string[]>;
+			for (const file of files) {
+				const contents = fs.readFileSync(file, {
+					encoding: 'utf-8',
+					flag: 'r',
+				});
 
-					this.previousGames.push(
-						HistoryTree.fromStructure(structure),
-					);
-				}
+				const structure = JSON.parse(contents) as Structure<string[]>;
+
+				this.previousGames.push(HistoryTree.fromStructure(structure));
 			}
 		} else {
 			fs.mkdirSync('./saves');
