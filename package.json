@@ -9,7 +9,7 @@
         "name": "Alex Dumbreck",
         "email": "40552841@live.napier.ac.uk"
     },
-    "packageManager": "yarn@3.4.1",
+    "packageManager": "yarn@3.5.0",
     "dependencies": {
         "chalk": "5.2.0",
         "readline": "1.3.0"
