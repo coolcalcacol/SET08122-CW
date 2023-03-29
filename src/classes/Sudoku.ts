@@ -12,35 +12,28 @@ import {
 import Board from './Board.js';
 import { Structure } from '../interfaces/Structure.js';
 import { HistoryTree } from './History.js';
+import Table from './Table.js';
+import SelectMenu from './SelectMenu.js';
+import BoardGenerator from './BoardGenerator.js';
 
-const {
-	black,
-	blackBright,
-	green,
-	greenBright,
-	dim,
-	blue,
-	blueBright,
-	red,
-	yellow,
-} = chalk;
+const { greenBright, dim, blue, blueBright, red } = chalk;
 
 const DEFAULT_PROMPT = dim('sudoku> ');
-const DEFAULT_DIVIDER = black('───────────────────────────────────────');
 export enum Difficulty {
-	Easy = 'Easy',
-	Medium = 'Medium',
-	Hard = 'Hard',
+	Easy,
+	Medium,
+	Hard,
+	Extreme,
+	Impossible,
 }
 export default class {
 	private previousGames: HistoryTree<string[]>[] = [];
 	private currentBoard?: Board;
-	private difficulty?: Difficulty | number;
-
 	constructor() {
 		this.readFolder();
-		this.displayStart();
-		this.startGame();
+		this.displayWelcome().then(() => {
+			return;
+		});
 	}
 
 	private readFolder() {
@@ -48,7 +41,7 @@ export default class {
 		if (fs.existsSync('./saves')) {
 			const files = fs.readdirSync('./saves');
 			for (const file of files) {
-				const contents = fs.readFileSync(file, {
+				const contents = fs.readFileSync(`./saves/${file}`, {
 					encoding: 'utf-8',
 					flag: 'r',
 				});
@@ -70,145 +63,106 @@ export default class {
 		);
 	}
 
-	private displayStart() {
-		console.log(DEFAULT_DIVIDER);
-		console.log(green(' Welcome to Sudoku!'));
-		console.log(DEFAULT_DIVIDER);
-		console.log(dim('INSTRUCTIONS:\n'));
-		console.log(
-			dim(
-				'To place a number, first type "play", type the row number, then the column letter, then the number you want to place.',
-			),
+	private async displayWelcome() {
+		const menu = new SelectMenu(Table.formatWelcomeMessage());
+		const mode = await new Promise<0 | 1 | 2>((resolve) =>
+			menu.on('select', (mode) => resolve(mode)),
 		);
-		console.log(
-			dim('For example, to place a 5 in the top left corner, type "') +
-				blueBright('play 1A 5') +
-				dim('".'),
-		);
-		// output instructions here
-		console.log(DEFAULT_DIVIDER);
+
+		switch (mode) {
+			case 0:
+				await this.newGame();
+				break;
+			case 1:
+				this.loadGame();
+				break;
+			case 2:
+				this.exit();
+				break;
+		}
 	}
 
-	private startGame() {
-		if (this.currentBoard === undefined) this.promptDifficulty();
-		else if (!this.currentBoard.solved) {
-			this.promptMove(this.currentBoard);
+	private async newGame() {
+		const sizeMenu = new SelectMenu(Table.formatNewGameMessage(), 1);
+
+		const mode = await new Promise<0 | 1 | 2 | 3>((resolve) =>
+			sizeMenu.on('select', (mode) => resolve(mode)),
+		);
+
+		const modes = {
+			0: 4,
+			1: 9,
+			2: 16,
+			3: 25,
+		};
+
+		const boardGenerator = new BoardGenerator(modes[mode]);
+
+		const difficultyMenu = new SelectMenu(
+			Table.formatDifficultyMessage(),
+			1,
+		);
+
+		const difficulties = {
+			0: Difficulty.Easy,
+			1: Difficulty.Medium,
+			2: Difficulty.Hard,
+			3: Difficulty.Extreme,
+			4: Difficulty.Impossible,
+		};
+		const difficulty = await new Promise<0 | 1 | 2 | 3 | 4 | 5>((resolve) =>
+			difficultyMenu.on('select', (difficulty) => resolve(difficulty)),
+		);
+
+		let puzzle: number[][];
+		if (difficulty !== 5) {
+			puzzle = boardGenerator.generatePuzzle(difficulties[difficulty]);
+			console.log(
+				dim(blueBright(`${Difficulty[difficulty]} puzzle generated\n`)),
+			);
 		} else {
-			this.displayTable(this.currentBoard);
+			const max =
+				boardGenerator.getBoard().length *
+				boardGenerator.getBoard().length;
+			const count = await SelectMenu.promptNumberInput(
+				Table.formatCustomDifficultyMessage(max),
+				1,
+				max,
+			);
+			puzzle = boardGenerator.generatePuzzle(max - count);
+			console.log(
+				dim(blueBright(`Custom puzzle generated with ${count} clues`)),
+			);
+		}
+
+		this.currentBoard = new Board(puzzle, boardGenerator);
+		this.playGame(this.currentBoard);
+	}
+
+	private loadGame() {
+		// TODO
+	}
+
+	private exit() {
+		//TODO: Format a nice exit message
+		console.log(Table.textPad(9, red('Goodbye!')));
+		process.exit(0);
+	}
+
+	private playGame(board: Board) {
+		if (board.solved) {
+			for (const line of Table.format(board)) console.log(line);
+
 			console.log(dim(greenBright('Congratulations! You won!')));
-			console.log(DEFAULT_DIVIDER);
-			this.writeGame(this.currentBoard.structure);
+			console.log(Table.horizontalDivider(board.currentBoard.length));
+			this.writeGame(board.structure);
+			return this.displayWelcome();
 		}
-	}
-
-	private promptDifficulty(): void {
-		const rl = createInterface(process.stdin, process.stdout);
-
-		console.log(dim('Choose a difficulty:'));
-		console.log(`${green('easy')}, ${yellow('normal')}, ${red('hard')}`);
-		console.log(
-			"Or type 'custom' followed by a number to generate a custom board.",
-		);
-
-		rl.setPrompt(DEFAULT_PROMPT);
-		rl.prompt();
-
-		rl.on('line', (line) => {
-			switch (line.trim()) {
-				case 'easy':
-					this.difficulty = Difficulty.Easy;
-					break;
-				case 'medium':
-					this.difficulty = Difficulty.Medium;
-					break;
-				case 'hard':
-					this.difficulty = Difficulty.Hard;
-					break;
-				default:
-					if (line.startsWith('custom ')) {
-						const customDifficulty = Number(line.split(' ')[1]);
-						if (customDifficulty) {
-							this.difficulty = customDifficulty;
-							break;
-						}
-					}
-					//TODO: Review if this should error, or prompt again with error.
-					console.log(dim('Invalid difficulty. Defaulting to Easy.'));
-					this.difficulty = Difficulty.Easy;
-					break;
-			}
-			this.resetLine();
-			console.log(dim(`Generating "${line}" board...\n`));
-			this.currentBoard = Board.generateBoard(this.difficulty);
-			rl.close();
-		})
-			.on('close', () => {
-				return this.startGame();
-			})
-			.on('SIGINT', () => {
-				rl.pause();
-			});
-	}
-	private displayTable(board: Board) {
-		const topRow = black('┌───┬───┬───┬───┬───┬───┬───┬───┬───┐'),
-			middleRowMinor =
-				black('├') +
-				blackBright('───┼───┼───') +
-				black('┼') +
-				blackBright('───┼───┼───') +
-				black('┼') +
-				blackBright('───┼───┼───') +
-				black('┤'),
-			middleRowMajor = black('├───┼───┼───┼───┼───┼───┼───┼───┼───┤'),
-			bottomRow = black('└───┴───┴───┴───┴───┴───┴───┴───┴───┘');
-
-		console.log(`    A   B   C   D   E   F   G   H   I`);
-		console.log(`  ${topRow}`);
-
-		const usedNumbers = Array.from(Array(9).fill(0));
-
-		for (const [i, tableDataRow] of board.board.entries()) {
-			let rowString = `${i + 1} `;
-			for (const [j, str] of tableDataRow.entries()) {
-				const number = parseInt(str);
-				usedNumbers[number - 1]++;
-
-				const rowFunc = j % 3 === 0 ? black : blackBright;
-
-				const numString =
-					number === 0
-						? ' '
-						: board.initialBoard[i].includes(number)
-						? number
-						: blueBright(number);
-				rowString += rowFunc('│') + ` ${numString} `;
-			}
-			rowString += black('│');
-
-			if (i !== 0)
-				console.log(
-					`  ${i % 3 === 0 ? middleRowMajor : middleRowMinor}`,
-				);
-			console.log(rowString);
-		}
-		console.log(`  ${bottomRow}`);
-		console.log(dim(`for help type "${blueBright('help')}"`));
-		console.log(DEFAULT_DIVIDER);
-		console.log(dim(`${blueBright('blue')} - can still be used`));
-		console.log(
-			dim(`${blackBright('grey')} - all values for this number are used`),
-		);
-		console.log(
-			usedNumbers.reduce(
-				(t, n, i) =>
-					t + `${(n === 9 ? blackBright : blue)(`${i + 1}`)}   `,
-				'    ',
-			),
-		);
-		console.log(DEFAULT_DIVIDER);
+		this.promptMove(board);
 	}
 
 	private displayHelp(
+		board: Board,
 		rl: Interface,
 		args: string[],
 		failedAttempts: number,
@@ -233,7 +187,7 @@ export default class {
 					)}' for more information on a specific command.`,
 				),
 			);
-			console.log(DEFAULT_DIVIDER);
+			console.log(Table.horizontalDivider(board.currentBoard.length));
 
 			rl.prompt();
 
@@ -241,9 +195,8 @@ export default class {
 		}
 	}
 
-	private resetCursor(inputLength: number): void {
-		const DISPLAY_TABLE_HEIGHT = 27;
-		moveCursor(process.stdout, -3, -inputLength - DISPLAY_TABLE_HEIGHT);
+	private resetCursor(inputLength: number, tableHeight: number): void {
+		moveCursor(process.stdout, -3, -inputLength - tableHeight);
 		clearScreenDown(process.stdout);
 	}
 
@@ -253,9 +206,10 @@ export default class {
 	}
 
 	private promptMove(board: Board): void {
-		this.displayTable(board);
+		const table = Table.format(board);
+		console.log(table.join('\n'));
 
-		let failedAttempts = 0;
+		let failedAttempts = 1;
 
 		const rl = createInterface(process.stdin, process.stdout);
 
@@ -270,39 +224,29 @@ export default class {
 					board,
 					rl,
 					failedAttempts,
+					table.length,
 					data.replace('play ', ''),
 				);
-			} else if (data === 'undo') {
-				if (board.undo()) {
-					this.resetCursor(failedAttempts);
-
-					console.log(dim('Undid previous move'));
-					console.log(DEFAULT_DIVIDER);
-					rl.close();
-				} else {
-					failedAttempts = this.badAttempt(
-						rl,
-						'Cannot undo any further',
-						failedAttempts,
+			} else if (data === 'undo' || data === 'redo') {
+				if (board[data]()) {
+					this.resetCursor(failedAttempts, table.length);
+					const keyword = data === 'undo' ? 'Undid' : 'Redid';
+					console.log(dim(`${keyword} previous move`));
+					console.log(
+						Table.horizontalDivider(board.currentBoard.length),
 					);
-				}
-			} else if (data === 'redo') {
-				if (board.redo()) {
-					this.resetCursor(failedAttempts);
-
-					console.log(dim('Redid previous move'));
-					console.log(DEFAULT_DIVIDER);
 					rl.close();
 				} else {
 					failedAttempts = this.badAttempt(
 						rl,
-						'Cannot redo any further',
+						`Cannot ${data} any further`,
 						failedAttempts,
 					);
 				}
 			} else if (data === 'help' || data.startsWith('help ')) {
 				const parsedData = data.split('help ').slice(1);
 				failedAttempts = this.displayHelp(
+					board,
 					rl,
 					parsedData,
 					failedAttempts,
@@ -316,7 +260,7 @@ export default class {
 			}
 		})
 			.on('close', () => {
-				return this.startGame();
+				return this.playGame(board);
 			})
 			.on('SIGINT', () => {
 				rl.pause();
@@ -324,6 +268,7 @@ export default class {
 	}
 
 	private extractRowColAndNumber(
+		board: Board,
 		position: string,
 		number: string,
 		rl: Interface,
@@ -354,7 +299,7 @@ export default class {
 		if (
 			isNaN(parseInt(number)) ||
 			parseInt(number) < 1 ||
-			parseInt(number) > 9
+			parseInt(number) > board.initialBoard.length
 		) {
 			failedAttempts = this.badAttempt(
 				rl,
@@ -370,9 +315,16 @@ export default class {
 		board: Board,
 		rl: Interface,
 		failedAttempts: number,
+		tableSize: number,
 		data: string,
 	): number {
-		// e.g. "1A 5"
+		// Data:
+		// 	1A 5
+		// 	A1 5
+		// 	5 A1
+		// 	5 1A
+
+		// Should all work
 
 		const splitData = data.split(' ');
 
@@ -385,58 +337,53 @@ export default class {
 			return failedAttempts;
 		}
 
-		const scenario1 =
-			splitData[0].length === 2 && splitData[1].length === 1;
-		const scenario2 =
-			splitData[0].length === 1 && splitData[1].length === 2;
+		const isValid = (number: string) =>
+			!Number.isNaN(parseInt(number)) &&
+			(number.length === 1 ||
+				(board.initialBoard.length > 9 && number.length === 2));
 
-		if (!scenario1 && !scenario2) {
-			failedAttempts = this.badAttempt(
+		const scenario1 = splitData[0].length === 2 && isValid(splitData[1]);
+		const scenario2 = splitData[1].length === 2 && isValid(splitData[0]);
+
+		if (!scenario1 && !scenario2)
+			return this.badAttempt(
 				rl,
 				'Coordinate and number not recognized. Try again.',
 				failedAttempts,
 			);
-			return failedAttempts;
-		}
 
 		let v: [string, string];
-		if (scenario1) {
-			v = [splitData[0], splitData[1]];
-		} else if (scenario2) {
-			v = [splitData[1], splitData[0]];
-		} else {
-			failedAttempts = this.badAttempt(
+		if (scenario1) v = [splitData[0], splitData[1]];
+		else if (scenario2) v = [splitData[1], splitData[0]];
+		else
+			return this.badAttempt(
 				rl,
 				'Coordinate and number not recognized. Try again.',
 				failedAttempts,
 			);
-			return failedAttempts;
-		}
 
 		const rowColAndNumber = this.extractRowColAndNumber(
+			board,
 			...v,
 			rl,
 			failedAttempts,
 		);
-		if (typeof rowColAndNumber === 'number') {
-			return rowColAndNumber;
-		}
+		if (typeof rowColAndNumber === 'number') return rowColAndNumber;
 		const [row, col, number] = rowColAndNumber;
 
-		if (board.initialBoard[row][col] !== 0) {
-			failedAttempts = this.badAttempt(
+		if (board.initialBoard[row][col] !== 0)
+			return this.badAttempt(
 				rl,
 				'That is a generated value, it cannot be changed. Try again.',
 				failedAttempts,
 			);
-			return failedAttempts;
-		}
 
-		const currentBoard = board.board.map((row) =>
-			row.map((val) => parseInt(val)),
+		const possibleValues = board.generator.getValidValues(
+			board.currentBoard,
+			row,
+			col,
 		);
-		currentBoard[row][col] = number;
-		if (!Board.isValid(currentBoard)) {
+		if (!possibleValues.includes(number)) {
 			failedAttempts = this.badAttempt(
 				rl,
 				'That is an invalid move. Try again.',
@@ -445,9 +392,9 @@ export default class {
 			return failedAttempts;
 		}
 
-		board.move(row, col, `${number}`);
+		board.move(row, col, number);
 
-		this.resetCursor(failedAttempts);
+		this.resetCursor(failedAttempts, tableSize);
 		console.log(
 			dim('Played ') +
 				blueBright(number) +
@@ -455,7 +402,7 @@ export default class {
 				blue(String.fromCharCode(col + 65) + (row + 1)) +
 				dim('.'),
 		);
-		console.log(DEFAULT_DIVIDER);
+		console.log(Table.horizontalDivider(board.currentBoard.length));
 
 		rl.close();
 		return failedAttempts;
