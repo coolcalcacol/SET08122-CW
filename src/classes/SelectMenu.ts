@@ -29,6 +29,7 @@ export default class SelectMenu extends EventEmitter {
 	private readonly data: SelectMenuData;
 
 	private selectedIndex = 0;
+	private menuSize = 0;
 	constructor(data: SelectMenuData, selectedIndex?: number) {
 		super();
 		this.data = data;
@@ -83,53 +84,68 @@ export default class SelectMenu extends EventEmitter {
 	};
 
 	private clearMenu = () => {
-		let messageLength = 0;
-		// Header border and title message
-		if (this.data.title) messageLength += 2;
-
-		// Border and preText
-		if (this.data.preText) messageLength += this.data.preText.length + 1;
-
-		// Top and Bottom border and options
-		messageLength += this.data.options.length + 2;
-
-		// Footer border and postText
-		if (this.data.postText) messageLength += this.data.postText.length + 1;
-
-		moveCursor(process.stdout, -3, -messageLength);
+		moveCursor(process.stdout, -3, -this.menuSize);
 		clearScreenDown(process.stdout);
+		this.menuSize = 0;
 	};
 
 	private writeMenu = () => {
+		const visibleOptions = this.data.options.slice(
+			this.selectedIndex - 3 < 0 ? 0 : this.selectedIndex - 3,
+			this.selectedIndex + 4 >= this.data.options.length
+				? undefined
+				: this.selectedIndex + 4,
+		);
+
 		if (this.data.title) {
-			console.log(Table.horizontalDivider(9));
-			console.log(Table.textPad(9, this.data.title));
+			this.log(Table.horizontalDivider(9));
+			this.log(Table.textPad(9, this.data.title));
 		}
 		if (this.data.preText) {
-			console.log(Table.horizontalDivider(9));
+			this.log(Table.horizontalDivider(9));
 			for (const line of this.data.preText)
-				console.log(Table.textPad(9, line));
+				this.log(Table.textPad(9, line));
 		}
 
-		console.log(Table.horizontalDivider(9));
-		for (const [i, line] of this.data.options.entries())
-			console.log(
+		this.log(Table.horizontalDivider(9));
+
+		if (visibleOptions[0] !== this.data.options[0]) {
+			this.log(Table.textPad(9, dim('...')));
+		}
+
+		let lastSeen = false;
+		for (const [i, line] of this.data.options.entries()) {
+			if (!visibleOptions.includes(line)) continue;
+			this.log(
 				Table.textPad(
 					9,
 					(i === this.selectedIndex ? inverse : dim)(line),
 				),
 			);
-		console.log(Table.horizontalDivider(9));
+			if (this.data.options[this.data.options.length - 1] === line)
+				lastSeen = true;
+		}
+
+		if (!lastSeen) {
+			this.log(Table.textPad(9, dim('...')));
+		}
+
+		this.log(Table.horizontalDivider(9));
 
 		if (this.data.postText) {
 			for (const line of this.data.postText)
-				console.log(Table.textPad(9, line));
-			console.log(Table.horizontalDivider(9));
+				this.log(Table.textPad(9, line));
+			this.log(Table.horizontalDivider(9));
 		}
 	};
 	private rewriteMenu = () => {
 		this.clearMenu();
 		this.writeMenu();
+	};
+
+	private log = (message: string) => {
+		this.menuSize++;
+		console.log(message);
 	};
 
 	private static resetLine = () => {
