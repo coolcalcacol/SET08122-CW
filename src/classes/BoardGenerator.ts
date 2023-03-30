@@ -120,20 +120,14 @@ export default class BoardGenerator {
 			if (board[row][col] !== 0) {
 				const value = board[row][col];
 				board[row][col] = 0;
-
-				if (this.hasUniqueSolution(board)) {
+				const copy = JSON.parse(JSON.stringify(board));
+				if (this.solve(copy, 0, 0)) {
 					removedCount++;
 				} else {
 					board[row][col] = value;
 				}
 			}
 		}
-	}
-
-	//TODO: Implement this, or don't. lol.
-	private hasUniqueSolution(board: number[][]): boolean {
-		const copy = JSON.parse(JSON.stringify(board));
-		return this.solve(copy, 0, 0);
 	}
 
 	private getBlanks(level: Difficulty) {
@@ -164,7 +158,7 @@ export default class BoardGenerator {
 		return this.board;
 	}
 
-	public generatePuzzle(difficulty: Difficulty | number): number[][] {
+	public generatePuzzle(difficulty: Difficulty): number[][] {
 		const board = this.getBoard();
 
 		switch (difficulty) {
@@ -175,10 +169,15 @@ export default class BoardGenerator {
 			case Difficulty.Impossible:
 				this.removeCells(board, this.getBlanks(difficulty));
 				break;
-			default:
-				this.removeCells(board, difficulty);
 		}
 
+		return board;
+	}
+
+	public generateCustomPuzzle(count: number): number[][] {
+		const board = this.getBoard();
+
+		this.removeCells(board, count);
 		return board;
 	}
 }
