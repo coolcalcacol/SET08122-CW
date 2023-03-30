@@ -3,6 +3,7 @@
 import { HistoryTree } from './History.js';
 import { Structure } from '../interfaces/Structure.js';
 import BoardGenerator from './BoardGenerator.js';
+import { Difficulty } from './Sudoku.js';
 
 export default class Board {
 	// store the current state of the board
@@ -13,12 +14,22 @@ export default class Board {
 
 	// store the board generator, so we can generate new puzzles
 	public readonly generator: BoardGenerator;
-	constructor(board: number[][], boardGenerator: BoardGenerator) {
+
+	public readonly difficulty: Difficulty | 'custom';
+	public readonly createdAt: Date = new Date();
+	public solvedAt: Date | null = null;
+
+	constructor(
+		board: number[][],
+		boardGenerator: BoardGenerator,
+		difficulty: Difficulty | 'custom',
+	) {
 		this.history = new HistoryTree<string[]>(
 			board.map((row) => row.join('')),
 		);
 		this.initialBoard = JSON.parse(JSON.stringify(board));
 		this.generator = boardGenerator;
+		this.difficulty = difficulty;
 	}
 
 	get currentBoard(): number[][] {
