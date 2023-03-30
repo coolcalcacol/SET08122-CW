@@ -26,8 +26,23 @@ export enum Difficulty {
 	Extreme,
 	Impossible,
 }
+
+interface PreviousGame {
+	history: Structure<string[]>;
+	difficulty: Difficulty | 'custom';
+	createdAt: Date;
+	solvedAt: Date;
+}
+
+interface PreviousParsedGame {
+	history: HistoryTree<string[]>;
+	difficulty: Difficulty | 'custom';
+	createdAt: Date;
+	solvedAt: Date;
+}
+
 export default class {
-	private previousGames: HistoryTree<string[]>[] = [];
+	private previousGames: PreviousParsedGame[] = [];
 	private currentBoard?: Board;
 	constructor() {
 		this.readFolder();
@@ -46,21 +61,33 @@ export default class {
 					flag: 'r',
 				});
 
-				const structure = JSON.parse(contents) as Structure<string[]>;
+				const game = JSON.parse(contents) as PreviousGame;
 
-				this.previousGames.push(HistoryTree.fromStructure(structure));
+				this.previousGames.push({
+					...game,
+					history: HistoryTree.fromStructure(game.history),
+				});
 			}
 		} else {
 			fs.mkdirSync('./saves');
 		}
 	}
 
-	private writeGame(structure: Structure<string[]>) {
+	private writeGame(board: Board) {
+		const structure = board.structure;
+		const data: PreviousGame = {
+			history: structure,
+			difficulty: board.difficulty,
+			createdAt: board.createdAt,
+			solvedAt: board.solvedAt as Date,
+		};
+
 		// write folder for saved games
-		fs.writeFileSync(
-			`./saves/${structure._id}.json`,
-			JSON.stringify(structure),
-		);
+		fs.writeFileSync(`./saves/${structure._id}.json`, JSON.stringify(data));
+		this.previousGames.push({
+			...data,
+			history: HistoryTree.fromStructure(board.structure),
+		});
 	}
 
 	private async displayWelcome() {
@@ -74,7 +101,7 @@ export default class {
 				await this.newGame();
 				break;
 			case 1:
-				this.loadGame();
+				await this.loadGame();
 				break;
 			case 2:
 				this.exit();
@@ -120,6 +147,11 @@ export default class {
 			console.log(
 				dim(blueBright(`${Difficulty[difficulty]} puzzle generated\n`)),
 			);
+			this.currentBoard = new Board(
+				puzzle,
+				boardGenerator,
+				difficulties[difficulty],
+			);
 		} else {
 			const max =
 				boardGenerator.getBoard().length *
@@ -129,33 +161,58 @@ export default class {
 				1,
 				max,
 			);
-			puzzle = boardGenerator.generatePuzzle(max - count);
+
+			puzzle = boardGenerator.generateCustomPuzzle(count);
 			console.log(
 				dim(blueBright(`Custom puzzle generated with ${count} clues`)),
 			);
+			this.currentBoard = new Board(puzzle, boardGenerator, 'custom');
 		}
 
-		this.currentBoard = new Board(puzzle, boardGenerator);
-		this.playGame(this.currentBoard);
+		await this.playGame(this.currentBoard);
 	}
 
-	private loadGame() {
-		// TODO
+	private async loadGame() {
+		if (this.previousGames.length === 0) {
+			console.log(
+				Table.textPad(
+					9,
+					red('No saved games found. Please create a new game'),
+				),
+			);
+			return this.displayWelcome();
+		}
+
+		const messages = this.previousGames.map(
+			(game, index) =>
+				`Game #${index + 1} | ${
+					game.difficulty === 'custom'
+						? 'Custom'
+						: Difficulty[game.difficulty]
+				} | ${game.createdAt.toLocaleString()}`,
+		);
+		const loadMenu = new SelectMenu(Table.formatLoadGameMessage(messages));
+
+		const mode = await new Promise<number>((resolve) =>
+			loadMenu.on('select', (mode) => resolve(mode)),
+		);
+
+		console.log(mode, this.previousGames[mode]);
+		// TODO: system to move games forward and backwards in time using history's undo/redo
 	}
 
 	private exit() {
-		//TODO: Format a nice exit message
-		console.log(Table.textPad(9, red('Goodbye!')));
+		console.log(Table.textPad(9, red('Goodbye! Thanks for playing.')));
 		process.exit(0);
 	}
 
 	private playGame(board: Board) {
 		if (board.solved) {
+			board.solvedAt = new Date();
 			for (const line of Table.format(board)) console.log(line);
 
 			console.log(dim(greenBright('Congratulations! You won!')));
-			console.log(Table.horizontalDivider(board.currentBoard.length));
-			this.writeGame(board.structure);
+			this.writeGame(board);
 			return this.displayWelcome();
 		}
 		this.promptMove(board);
