@@ -178,4 +178,12 @@ export default class Table {
 	}
 
 	// Load Game Menu
+
+	public static formatLoadGameMessage(messages: string[]): SelectMenuData {
+		return {
+			title: `Load Game`,
+			preText: ['Select a game to load:'],
+			options: messages,
+		};
+	}
 }
