@@ -23,7 +23,7 @@
         "prettier": "prettier --write src/**/*",
         "prettier:check": "prettier --check src/**/*",
         "start": "./dist/sudoku.exe",
-        "dev": "yarn build && yarn start",
+        "dev": "yarn build && node ./dist/esm/index.js",
         "export": "yarn build && yarn compile && yarn pkg"
     },
     "devDependencies": {
