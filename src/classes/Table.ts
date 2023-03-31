@@ -1,10 +1,9 @@
 /** @format */
 
-import Board from './Board.js';
 import chalk from 'chalk';
 import { SelectMenuData } from './SelectMenu.js';
 
-const { black, blackBright, greenBright, dim, blue, blueBright } = chalk;
+const { black, blackBright, greenBright, dim, blue, blueBright, white } = chalk;
 
 export default class Table {
 	// top elements
@@ -62,14 +61,18 @@ export default class Table {
 		const bottomRow = `${Table.bottomLeft}${bottomRowMiddle}${Table.bottomRight}`;
 		return `${Table.leftPad(boardSize)}${bottomRow}`;
 	}
-	public static format(board: Board): string[] {
+	public static format(
+		currentBoard: number[][],
+		initialBoard: number[][],
+		displayExtra = true,
+	): string[] {
 		const outputString = [];
-		const boardSize = board.currentBoard.length;
+		const boardSize = currentBoard.length;
 		outputString.push(...Table.getTopRowString(boardSize));
 
 		const usedNumbers = Array.from(Array(boardSize).fill(0));
 
-		for (const [i, tableDataRow] of board.currentBoard.entries()) {
+		for (const [i, tableDataRow] of currentBoard.entries()) {
 			const isMajorRow = i % Math.sqrt(boardSize) === 0;
 			let dividerString = `${Table.leftPad(boardSize)}${
 					Table.leftMiddle
@@ -88,11 +91,9 @@ export default class Table {
 
 				rowString += Table.vertical(isMajorCol);
 				if (number !== 0) {
-					const inString = ` ${
-						board.initialBoard[i][j] === number
-							? number
-							: blue(number)
-					} `;
+					const inString = ` ${(initialBoard[i][j] === number
+						? white
+						: blue)(number)} `;
 					if (boardSize > 9) {
 						rowString += inString.padStart(2, ' ');
 					} else {
@@ -110,22 +111,29 @@ export default class Table {
 			outputString.push(rowString);
 		}
 		outputString.push(Table.getBottomRowString(boardSize));
-
-		outputString.push(dim(`for help type "${blueBright('help')}"`));
-		outputString.push(Table.horizontalDivider(boardSize));
-		outputString.push(dim(`${blueBright('blue')} - can still be used`));
-		outputString.push(
-			dim(`${blackBright('grey')} - all values for this number are used`),
-		);
-		outputString.push(
-			usedNumbers.reduce(
-				(t, n, i) =>
-					t +
-					`${(n === boardSize ? blackBright : blue)(`${i + 1}`)}   `,
-				'    ',
-			),
-		);
-		outputString.push(Table.horizontalDivider(boardSize));
+		if (displayExtra) {
+			outputString.push(dim(`for help type "${blueBright('help')}"`));
+			outputString.push(Table.horizontalDivider(boardSize));
+			outputString.push(dim(`${blueBright('blue')} - can still be used`));
+			outputString.push(
+				dim(
+					`${blackBright(
+						'grey',
+					)} - all values for this number are used`,
+				),
+			);
+			outputString.push(
+				usedNumbers.reduce(
+					(t, n, i) =>
+						t +
+						`${(n === boardSize ? blackBright : blue)(
+							`${i + 1}`,
+						)}   `,
+					'    ',
+				),
+			);
+			outputString.push(Table.horizontalDivider(boardSize));
+		}
 
 		return outputString;
 	}

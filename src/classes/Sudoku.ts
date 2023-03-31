@@ -28,6 +28,7 @@ export enum Difficulty {
 }
 
 interface PreviousGame {
+	initialBoard: number[][];
 	history: Structure<string[]>;
 	difficulty: Difficulty | 'custom';
 	createdAt: Date;
@@ -35,6 +36,7 @@ interface PreviousGame {
 }
 
 interface PreviousParsedGame {
+	initialBoard: number[][];
 	history: HistoryTree<string[]>;
 	difficulty: Difficulty | 'custom';
 	createdAt: Date;
@@ -76,6 +78,7 @@ export default class {
 	private writeGame(board: Board) {
 		const structure = board.structure;
 		const data: PreviousGame = {
+			initialBoard: board.initialBoard,
 			history: structure,
 			difficulty: board.difficulty,
 			createdAt: board.createdAt,
@@ -197,8 +200,7 @@ export default class {
 			loadMenu.on('select', (mode) => resolve(mode)),
 		);
 
-		console.log(mode, this.previousGames[mode]);
-		// TODO: system to move games forward and backwards in time using history's undo/redo
+		await this.loadedGame(this.previousGames[mode]);
 	}
 
 	private exit() {
@@ -209,13 +211,82 @@ export default class {
 	private playGame(board: Board) {
 		if (board.solved) {
 			board.solvedAt = new Date();
-			for (const line of Table.format(board)) console.log(line);
+			for (const line of Table.format(
+				board.currentBoard,
+				board.initialBoard,
+			))
+				console.log(line);
 
 			console.log(dim(greenBright('Congratulations! You won!')));
 			this.writeGame(board);
 			return this.displayWelcome();
 		}
 		this.promptMove(board);
+	}
+
+	private loadedGame(previousGame: PreviousParsedGame) {
+		const table = this.printLoadedGame(previousGame);
+
+		// forwards, backwards and exit
+		let failedAttempts = 1;
+
+		const rl = createInterface(process.stdin, process.stdout);
+
+		rl.setPrompt(DEFAULT_PROMPT);
+		rl.prompt();
+
+		rl.on('line', (line) => {
+			const data = line.trim();
+
+			if (data === 'exit') {
+				this.resetCursor(failedAttempts, table.length);
+				rl.close();
+			} else if (data === 'next') {
+				// go to next move
+				previousGame.history.redo();
+				this.resetCursor(failedAttempts, table.length);
+				this.printLoadedGame(previousGame);
+				rl.prompt();
+			} else if (data === 'prev') {
+				// go to previous move
+				previousGame.history.undo();
+				this.resetCursor(failedAttempts, table.length);
+				this.printLoadedGame(previousGame);
+				rl.prompt();
+			} else {
+				failedAttempts = this.badAttempt(
+					rl,
+					'Invalid command supplied. Try again.',
+					failedAttempts,
+				);
+			}
+		})
+			.on('close', () => {
+				return this.displayWelcome();
+			})
+			.on('SIGINT', () => {
+				rl.pause();
+			});
+	}
+
+	private printLoadedGame(previousGame: PreviousParsedGame) {
+		const table = Table.format(
+			previousGame.history.current.map((row) =>
+				`${row}`.split('').map((n) => parseInt(n)),
+			),
+			previousGame.initialBoard,
+			false,
+		);
+		table.push(
+			dim(`To go to the next move, type "${greenBright('next')}"`),
+		);
+		table.push(
+			dim(`To go to the previous move, type "${greenBright('prev')}"`),
+		);
+		table.push(dim(`To exit, type "${greenBright('exit')}"`));
+		console.log(table.join('\n'));
+
+		return table;
 	}
 
 	private displayHelp(
@@ -226,6 +297,45 @@ export default class {
 	): number {
 		this.resetLine();
 		if (args.length > 0) {
+			switch (args[0]) {
+				case 'help':
+					console.log(
+						`Help Message - ${dim('Help')}:\n` +
+							`  ${blueBright(
+								'help',
+							)} - Display this help message\n`,
+					);
+					failedAttempts += 3;
+					break;
+				case 'undo':
+					console.log(
+						`Help Message - ${dim('Undo')}:\n` +
+							`  ${blueBright('undo')} - Undo the latest move\n`,
+					);
+					failedAttempts += 3;
+					break;
+				case 'redo':
+					console.log(
+						`Help Message - ${dim('Redo')}:\n` +
+							`  ${blueBright(
+								'redo',
+							)} - Redo a move undone by undo\n`,
+					);
+					failedAttempts += 3;
+					break;
+				case 'play':
+					console.log(
+						`Help Message - ${dim('Play')}:\n` +
+							`  ${blueBright('play')} - Play a move\n` +
+							`  Arguments: ${blueBright(
+								'play',
+							)} <row><column> <number>\n` +
+							`  Example: ${blueBright('play')} 1A 1\n`,
+					);
+					failedAttempts += 5;
+					break;
+				default:
+			}
 			// TODO: Add help for specific commands
 			rl.prompt();
 			return failedAttempts;
@@ -263,7 +373,7 @@ export default class {
 	}
 
 	private promptMove(board: Board): void {
-		const table = Table.format(board);
+		const table = Table.format(board.currentBoard, board.initialBoard);
 		console.log(table.join('\n'));
 
 		let failedAttempts = 1;
