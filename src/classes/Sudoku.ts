@@ -298,70 +298,73 @@ export default class {
 		failedAttempts: number,
 	): number {
 		this.resetLine();
-		if (args.length > 0) {
-			switch (args[0]) {
-				case 'help':
-					console.log(
-						`Help Message - ${dim('Help')}:\n` +
-							`  ${blueBright(
-								'help',
-							)} - Display this help message\n`,
-					);
-					failedAttempts += 3;
-					break;
-				case 'undo':
-					console.log(
-						`Help Message - ${dim('Undo')}:\n` +
-							`  ${blueBright('undo')} - Undo the latest move\n`,
-					);
-					failedAttempts += 3;
-					break;
-				case 'redo':
-					console.log(
-						`Help Message - ${dim('Redo')}:\n` +
-							`  ${blueBright(
-								'redo',
-							)} - Redo a move undone by undo\n`,
-					);
-					failedAttempts += 3;
-					break;
-				case 'play':
-					console.log(
-						`Help Message - ${dim('Play')}:\n` +
-							`  ${blueBright('play')} - Play a move\n` +
-							`  Arguments: ${blueBright(
-								'play',
-							)} <row><column> <number>\n` +
-							`  Example: ${blueBright('play')} 1A 1\n`,
-					);
-					failedAttempts += 5;
-					break;
-				default:
-			}
-			// TODO: Add help for specific commands
-			rl.prompt();
-			return failedAttempts;
-		} else {
-			console.log(`Help Message - ${dim('Commands:')}`);
-			console.log(
-				`  ${blueBright('help')} - Display this help message\n` +
-					`  ${blueBright('undo')} - Undo the latest move\n` +
-					`  ${blueBright('redo')} - Redo a move undone by undo\n` +
-					`  ${blueBright('play')} - Play a move\n`,
-			);
-			console.log(
-				dim(
-					`Type '${greenBright(
-						'help <command>',
-					)}' for more information on a specific command.`,
-				),
-			);
-			console.log(Table.horizontalDivider(board.currentBoard.length));
-
-			rl.prompt();
-
-			return failedAttempts + 8;
+		switch (args[0]) {
+			case 'help':
+				console.log(
+					`Help Message - ${dim('Help')}:\n` +
+						`  ${blueBright('help')} - Display this help message\n`,
+				);
+				failedAttempts += 3;
+				break;
+			case 'undo':
+				console.log(
+					`Help Message - ${dim('Undo')}:\n` +
+						`  ${blueBright('undo')} - Undo the latest move\n`,
+				);
+				failedAttempts += 3;
+				break;
+			case 'redo':
+				console.log(
+					`Help Message - ${dim('Redo')}:\n` +
+						`  ${blueBright(
+							'redo',
+						)} - Redo a move undone by undo\n`,
+				);
+				failedAttempts += 3;
+				break;
+			case 'play':
+				console.log(
+					`Help Message - ${dim('Play')}:\n` +
+						`  ${blueBright('play')} - Play a move\n` +
+						`  Arguments: ${blueBright(
+							'play',
+						)} <row><column> <number>\n` +
+						`  Example: ${blueBright('play')} 1A 1\n`,
+				);
+				failedAttempts += 5;
+				break;
+			case undefined:
+				console.log(`Help Message - ${dim('Commands:')}`);
+				console.log(
+					`  ${blueBright('help')} - Display this help message\n` +
+						`  ${blueBright('undo')} - Undo the latest move\n` +
+						`  ${blueBright(
+							'redo',
+						)} - Redo a move undone by undo\n` +
+						`  ${blueBright('play')} - Play a move\n`,
+				);
+				console.log(
+					dim(
+						`Type '${greenBright(
+							'help <command>',
+						)}' for more information on a specific command.`,
+					),
+				);
+				console.log(Table.horizontalDivider(board.currentBoard.length));
+				failedAttempts += 8;
+				break;
+			default:
+				console.log(
+					`Invalid subcommand supplied.` +
+						` Type '${greenBright(
+							'help',
+						)}' for a list of commands.`,
+				);
+				failedAttempts += 1;
+				break;
 		}
+		rl.prompt();
+		return failedAttempts;
 	}
 
 	private resetCursor(inputLength: number, tableHeight: number): void {
