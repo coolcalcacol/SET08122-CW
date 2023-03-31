@@ -1,4 +1,5 @@
 /** @format */
+
 import {
 	clearLine,
 	clearScreenDown,
@@ -20,9 +21,6 @@ export interface SelectMenuData {
 	readonly options: string[];
 	readonly postText?: string[];
 }
-
-//TODO: This could have SubMenus maybe, allowing the user to go back and forward between stages of selection?
-//TODO: Look into limiting the number of shown options if options length is greater than a certain number
 
 emitKeypressEvents(process.stdin);
 export default class SelectMenu extends EventEmitter {
