@@ -23,8 +23,8 @@ jobs:
             -   name: Build, compile and package the app
                 run: yarn export
 
-            -   name: Upload executable
+            -   name: Upload executables
                 uses: actions/upload-artifact@v3
                 with:
                     name: sudoku
-                    path: dist/sudoku.exe
+                    path: dist/sudoku

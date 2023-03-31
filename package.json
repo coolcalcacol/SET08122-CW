@@ -17,7 +17,7 @@
     "scripts": {
         "build": "tsc",
         "compile": "esbuild dist/esm/index.js --bundle --outfile=dist/bundle.cjs --format=cjs --platform=node",
-        "pkg": "pkg dist/bundle.cjs --output dist/sudoku",
+        "pkg": "pkg dist/bundle.cjs --out-path dist/sudoku --targets node18-win-x64,node18-linux-x64,node18-macos-x64",
         "lint": "eslint src/ --ext .ts",
         "lint:fix": "eslint src/ --ext .ts --fix",
         "prettier": "prettier --write src/**/*",
