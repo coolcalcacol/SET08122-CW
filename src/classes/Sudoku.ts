@@ -217,7 +217,9 @@ export default class {
 			))
 				console.log(line);
 
-			console.log(dim(greenBright('Congratulations! You won!')));
+			console.log(
+				dim(greenBright('Congratulations! You completed the puzzle!')),
+			);
 			this.writeGame(board);
 			return this.displayWelcome();
 		}
