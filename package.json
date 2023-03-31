@@ -18,13 +18,15 @@
         "build": "tsc",
         "compile": "esbuild dist/esm/index.js --bundle --outfile=dist/bundle.cjs --format=cjs --platform=node",
         "pkg": "pkg dist/bundle.cjs --out-path dist/sudoku --targets node18-win-x64,node18-linux-x64,node18-macos-x64",
+        "export": "yarn build && yarn compile && yarn pkg",
+        "start:windows": "./dist/sudoku/bundle-win.exe",
+        "start:linux": "./dist/sudoku/bundle-linux",
+        "start:macos": "./dist/sudoku/bundle-macos",
+        "start:dev": "yarn build && node ./dist/esm/index.js",
         "lint": "eslint src/ --ext .ts",
         "lint:fix": "eslint src/ --ext .ts --fix",
         "prettier": "prettier --write src/**/*",
-        "prettier:check": "prettier --check src/**/*",
-        "start": "./dist/sudoku.exe",
-        "dev": "yarn build && node ./dist/esm/index.js",
-        "export": "yarn build && yarn compile && yarn pkg"
+        "prettier:check": "prettier --check src/**/*"
     },
     "devDependencies": {
         "@types/node": "18.14.6",

@@ -2,59 +2,93 @@
 
 import { Difficulty } from './Sudoku.js';
 
+interface BoardTile {
+	row: number;
+	col: number;
+	candidates: number[];
+}
 export default class BoardGenerator {
-	private readonly board: number[][];
 	private readonly size: number;
 	private readonly subgridSize: number;
 
+	private readonly board: number[][];
+	private boardTiles: BoardTile[] = [];
 	constructor(size: number) {
 		if (!Number.isInteger(Math.sqrt(size))) throw new Error('Invalid size');
 		this.size = size;
 		this.subgridSize = Math.sqrt(size);
-		this.board = this.generateBoard();
-	}
-
-	private generateBoard(): number[][] {
-		const board: number[][] = Array.from(Array(this.size), () =>
+		this.board = Array.from(Array(this.size), () =>
 			Array(this.size).fill(0),
 		);
-		this.solve(board, 0, 0);
 
-		return board;
+		this.boardTiles = this.board
+			.map((row, rowIndex) =>
+				row.map(
+					(col, colIndex) =>
+						({
+							row: rowIndex,
+							col: colIndex,
+							candidates: Array.from(
+								Array(this.size),
+								(_, i) => i + 1,
+							),
+						} as BoardTile),
+				),
+			)
+			.flat();
+
+		console.log('BoardGenerator is now generating');
+		console.time('Main-Solving');
+		this.solve();
+		console.timeEnd('Main-Solving');
 	}
 
-	public solve(board: number[][], row: number, col: number): boolean {
-		if (row === this.size) return true;
+	public solve(): boolean {
+		if (this.boardTiles.length === 0) return true;
 
-		let nextRow = row;
-		let nextCol = col + 1;
+		const sortedBoardTiles = this.boardTiles.sort(
+			(a, b) => b.candidates.length - a.candidates.length,
+		);
 
-		if (nextCol === this.size) {
-			nextRow++;
-			nextCol = 0;
+		const { row, col, candidates } = sortedBoardTiles.shift() as BoardTile;
+		const values = this.shuffle(candidates);
+
+		for (const value of values) {
+			if (!this.isValid(row, col, value)) continue;
+
+			this.board[row][col] = value;
+
+			if (this.solve()) return true;
+
+			this.board[row][col] = 0;
 		}
 
-		if (board[row][col] !== 0) {
-			return this.solve(board, nextRow, nextCol);
-		}
-
-		const values = this.shuffle(this.getValidValues(board, row, col));
-
-		for (const element of values) {
-			board[row][col] = element;
-
-			if (this.solve(board, nextRow, nextCol)) {
-				return true;
-			}
-		}
-
-		board[row][col] = 0;
-
+		this.boardTiles.push({ row, col, candidates });
 		return false;
 	}
 
 	public isBoardFilled(board: number[][]): boolean {
 		return board.every((row) => row.every((cell) => cell !== 0));
+	}
+
+	public isValid(row: number, col: number, value: number): boolean {
+		for (let i = 0; i < this.board.length; i++) {
+			if (this.board[row][i] === value) return false;
+			if (this.board[i][col] === value) return false;
+		}
+
+		const subgridRow =
+			Math.floor(row / this.subgridSize) * this.subgridSize;
+		const subgridCol =
+			Math.floor(col / this.subgridSize) * this.subgridSize;
+
+		for (let i = subgridRow; i < subgridRow + this.subgridSize; i++) {
+			for (let j = subgridCol; j < subgridCol + this.subgridSize; j++) {
+				if (this.board[i][j] === value) return false;
+			}
+		}
+
+		return true;
 	}
 
 	public getValidValues(
@@ -64,15 +98,13 @@ export default class BoardGenerator {
 	): number[] {
 		const values: number[] = [];
 
-		for (let i = 1; i <= this.size; i++) {
-			values.push(i);
-		}
+		for (let i = 1; i <= this.size; i++) values.push(i);
 
 		for (let i = 0; i < this.size; i++) {
 			const rowValue = board[row][i];
 			const colValue = board[i][col];
 
-			if (rowValue !== 0 || colValue !== 0) {
+			if (rowValue !== 0) {
 				const rowIndex = values.indexOf(rowValue);
 				if (rowIndex !== -1) values.splice(rowIndex, 1);
 			}
@@ -110,21 +142,20 @@ export default class BoardGenerator {
 		return array;
 	}
 
-	private removeCells(board: number[][], count: number) {
+	private removeCells(count: number) {
 		let removedCount = 0;
 
 		while (removedCount < count) {
 			const row = Math.floor(Math.random() * this.size);
 			const col = Math.floor(Math.random() * this.size);
 
-			if (board[row][col] !== 0) {
-				const value = board[row][col];
-				board[row][col] = 0;
-				const copy = JSON.parse(JSON.stringify(board));
-				if (this.solve(copy, 0, 0)) {
+			if (this.board[row][col] !== 0) {
+				const value = this.board[row][col];
+				this.board[row][col] = 0;
+				if (this.solve()) {
 					removedCount++;
 				} else {
-					board[row][col] = value;
+					this.board[row][col] = value;
 				}
 			}
 		}
@@ -159,25 +190,21 @@ export default class BoardGenerator {
 	}
 
 	public generatePuzzle(difficulty: Difficulty): number[][] {
-		const board = this.getBoard();
-
 		switch (difficulty) {
 			case Difficulty.Easy:
 			case Difficulty.Medium:
 			case Difficulty.Hard:
 			case Difficulty.Extreme:
 			case Difficulty.Impossible:
-				this.removeCells(board, this.getBlanks(difficulty));
+				this.removeCells(this.getBlanks(difficulty));
 				break;
 		}
 
-		return board;
+		return this.board;
 	}
 
 	public generateCustomPuzzle(count: number): number[][] {
-		const board = this.getBoard();
-
-		this.removeCells(board, count);
-		return board;
+		this.removeCells(count);
+		return this.board;
 	}
 }

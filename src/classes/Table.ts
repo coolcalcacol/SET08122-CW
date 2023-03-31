@@ -33,6 +33,8 @@ export default class Table {
 
 	public static textPad = (boardSize: number, text: string) =>
 		`${this.leftPad(boardSize)} ${text}`;
+
+	//TODO: Fix this method
 	public static horizontalDivider = (boardSize: number) =>
 		this.leftPad(boardSize) +
 		this.horizontalPad(boardSize).repeat(boardSize);
@@ -94,8 +96,8 @@ export default class Table {
 					const inString = ` ${(initialBoard[i][j] === number
 						? white
 						: blue)(number)} `;
-					if (boardSize > 9) {
-						rowString += inString.padStart(2, ' ');
+					if (boardSize > 9 && number < 10) {
+						rowString += ` ${inString}`;
 					} else {
 						rowString += inString;
 					}
@@ -112,14 +114,21 @@ export default class Table {
 		}
 		outputString.push(Table.getBottomRowString(boardSize));
 		if (displayExtra) {
-			outputString.push(dim(`for help type "${blueBright('help')}"`));
+			outputString.push(
+				this.leftPad(boardSize) +
+					dim(`for help type "${blueBright('help')}"`),
+			);
 			outputString.push(Table.horizontalDivider(boardSize));
-			outputString.push(dim(`${blueBright('blue')} - can still be used`));
+			outputString.push(
+				this.leftPad(boardSize) +
+					dim(`${blueBright('blue')} - can still be used`),
+			);
 			outputString.push(
 				dim(
-					`${blackBright(
-						'grey',
-					)} - all values for this number are used`,
+					this.leftPad(boardSize) +
+						`${blackBright(
+							'grey',
+						)} - all values for this number are used`,
 				),
 			);
 			outputString.push(
