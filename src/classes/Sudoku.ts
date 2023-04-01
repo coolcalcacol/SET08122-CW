@@ -94,6 +94,7 @@ export default class {
 	}
 
 	private async displayWelcome() {
+		this.resetCursor(100, 100);
 		const menu = new SelectMenu(Table.formatWelcomeMessage());
 		const mode = await new Promise<0 | 1 | 2>((resolve) =>
 			menu.on('select', (mode) => resolve(mode)),
@@ -127,6 +128,7 @@ export default class {
 		};
 
 		const boardGenerator = new BoardGenerator(modes[mode]);
+		await boardGenerator.generate();
 
 		const difficultyMenu = new SelectMenu(
 			Table.formatDifficultyMessage(),
@@ -200,7 +202,7 @@ export default class {
 			loadMenu.on('select', (mode) => resolve(mode)),
 		);
 
-		await this.loadedGame(this.previousGames[mode]);
+		this.loadedGame(this.previousGames[mode]);
 	}
 
 	private exit() {

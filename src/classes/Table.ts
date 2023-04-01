@@ -151,9 +151,9 @@ export default class Table {
 			title: `Welcome to ${greenBright('Sudoku')}!`,
 			preText: ['Select an option below:'],
 			options: [
-				`To start a game type ${blueBright('new')}`,
-				`To load a game type ${blueBright('load')}`,
-				`To exit type ${blueBright('exit')}`,
+				blueBright('New Game'),
+				blueBright('Load Game'),
+				blueBright('Exit'),
 			],
 		};
 	}

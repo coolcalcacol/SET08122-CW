@@ -1,18 +1,20 @@
 /** @format */
 
+import { fork, ChildProcess } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { cpus } from 'os';
+
 import { Difficulty } from './Sudoku.js';
 
-interface BoardTile {
-	row: number;
-	col: number;
-	candidates: number[];
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export default class BoardGenerator {
 	private readonly size: number;
 	private readonly subgridSize: number;
 
-	private readonly board: number[][];
-	private boardTiles: BoardTile[] = [];
+	private board: number[][];
 	constructor(size: number) {
 		if (!Number.isInteger(Math.sqrt(size))) throw new Error('Invalid size');
 		this.size = size;
@@ -20,75 +22,44 @@ export default class BoardGenerator {
 		this.board = Array.from(Array(this.size), () =>
 			Array(this.size).fill(0),
 		);
-
-		this.boardTiles = this.board
-			.map((row, rowIndex) =>
-				row.map(
-					(col, colIndex) =>
-						({
-							row: rowIndex,
-							col: colIndex,
-							candidates: Array.from(
-								Array(this.size),
-								(_, i) => i + 1,
-							),
-						} as BoardTile),
-				),
-			)
-			.flat();
-
-		console.log('BoardGenerator is now generating');
-		console.time('Main-Solving');
-		this.solve();
-		console.timeEnd('Main-Solving');
 	}
 
-	public solve(): boolean {
-		if (this.boardTiles.length === 0) return true;
+	public async generate() {
+		return this.solve();
+	}
 
-		const sortedBoardTiles = this.boardTiles.sort(
-			(a, b) => b.candidates.length - a.candidates.length,
-		);
+	private solve(): Promise<boolean> {
+		const childPool: ChildProcess[] = [];
+		const numProcesses = cpus().length / 2;
 
-		const { row, col, candidates } = sortedBoardTiles.shift() as BoardTile;
-		const values = this.shuffle(candidates);
+		for (let i = 0; i < numProcesses; i++)
+			childPool.push(fork(join(__dirname, '..', 'utils', 'solve.js')));
 
-		for (const value of values) {
-			if (!this.isValid(row, col, value)) continue;
+		const killChildren = () => {
+			for (const child of childPool) child.kill();
+		};
 
-			this.board[row][col] = value;
-
-			if (this.solve()) return true;
-
-			this.board[row][col] = 0;
-		}
-
-		this.boardTiles.push({ row, col, candidates });
-		return false;
+		return new Promise<boolean>((resolve, reject) => {
+			for (const child of childPool) {
+				child.send({
+					board: this.board,
+				});
+				child.on('message', (board: number[][]) => {
+					this.board = board;
+					killChildren();
+					resolve(true);
+				});
+				child.on('error', (err) => {
+					console.error(err);
+					killChildren();
+					reject(err);
+				});
+			}
+		});
 	}
 
 	public isBoardFilled(board: number[][]): boolean {
 		return board.every((row) => row.every((cell) => cell !== 0));
-	}
-
-	public isValid(row: number, col: number, value: number): boolean {
-		for (let i = 0; i < this.board.length; i++) {
-			if (this.board[row][i] === value) return false;
-			if (this.board[i][col] === value) return false;
-		}
-
-		const subgridRow =
-			Math.floor(row / this.subgridSize) * this.subgridSize;
-		const subgridCol =
-			Math.floor(col / this.subgridSize) * this.subgridSize;
-
-		for (let i = subgridRow; i < subgridRow + this.subgridSize; i++) {
-			for (let j = subgridCol; j < subgridCol + this.subgridSize; j++) {
-				if (this.board[i][j] === value) return false;
-			}
-		}
-
-		return true;
 	}
 
 	public getValidValues(
@@ -134,29 +105,15 @@ export default class BoardGenerator {
 		return values;
 	}
 
-	private shuffle<T>(array: T[]): T[] {
-		for (let i = array.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[array[i], array[j]] = [array[j], array[i]];
-		}
-		return array;
-	}
-
 	private removeCells(count: number) {
 		let removedCount = 0;
-
 		while (removedCount < count) {
 			const row = Math.floor(Math.random() * this.size);
 			const col = Math.floor(Math.random() * this.size);
 
 			if (this.board[row][col] !== 0) {
-				const value = this.board[row][col];
 				this.board[row][col] = 0;
-				if (this.solve()) {
-					removedCount++;
-				} else {
-					this.board[row][col] = value;
-				}
+				removedCount++;
 			}
 		}
 	}

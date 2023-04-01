@@ -25,7 +25,6 @@ class HistoryTreeNode<T> {
 
 	get children(): HistoryTreeNode<T>[] {
 		return this._children.slice();
-		// return a copy to prevent direct modification
 	}
 
 	get structure(): Structure<T> {
