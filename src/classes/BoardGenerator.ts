@@ -135,10 +135,10 @@ export default class BoardGenerator {
 			[Difficulty.Impossible]: 0.8,
 		};
 
-		return (
+		return Math.floor(
 			this.board.length *
-			this.board.length *
-			(Math.floor(Math.random() * (max[level] - min[level])) + max[level])
+				this.board.length *
+				(Math.random() * (max[level] - min[level]) + max[level]),
 		);
 	}
 
