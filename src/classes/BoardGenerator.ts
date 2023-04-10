@@ -25,15 +25,28 @@ export default class BoardGenerator {
 	}
 
 	public async generate() {
-		return this.solve();
+		this.fillDiagonal();
+		if (this.size > 16) return this.solveLarge();
+		return BoardGenerator.solve(this.board);
 	}
 
-	private solve(): Promise<boolean> {
+	private fillDiagonal(): void {
+		for (let i = 0; i < this.size; i += this.subgridSize) {
+			const values = Array.from({ length: this.size }, (_, i) => i + 1);
+			BoardGenerator.shuffle(values);
+			for (let j = 0; j < this.subgridSize; j++) {
+				for (let k = 0; k < this.subgridSize; k++) {
+					this.board[i + j][i + k] = values[j * this.subgridSize + k];
+				}
+			}
+		}
+	}
+	private solveLarge(): Promise<boolean> {
 		const childPool: ChildProcess[] = [];
 		const numProcesses = cpus().length / 2;
 
 		for (let i = 0; i < numProcesses; i++)
-			childPool.push(fork(join(__dirname, '..', 'utils', 'solve.js')));
+			childPool.push(fork(join(__dirname, 'BoardGenerator.js')));
 
 		const killChildren = () => {
 			for (const child of childPool) child.kill();
@@ -42,6 +55,7 @@ export default class BoardGenerator {
 		return new Promise<boolean>((resolve, reject) => {
 			for (const child of childPool) {
 				child.send({
+					solve: BoardGenerator.solve,
 					board: this.board,
 				});
 				child.on('message', (board: number[][]) => {
@@ -164,4 +178,92 @@ export default class BoardGenerator {
 		this.removeCells(count);
 		return this.board;
 	}
+
+	private static shuffle<T>(array: T[]): void {
+		for (let i = array.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[array[i], array[j]] = [array[j], array[i]];
+		}
+	}
+
+	private static isValid(
+		board: number[][],
+		row: number,
+		col: number,
+		value: number,
+	): boolean {
+		const subgridSize = Math.sqrt(board.length);
+		for (let i = 0; i < board.length; i++) {
+			if (board[row][i] === value) return false;
+			if (board[i][col] === value) return false;
+		}
+
+		const subgridRow = row - (row % subgridSize);
+		const subgridCol = col - (col % subgridSize);
+
+		for (let i = subgridRow; i < subgridRow + subgridSize; i++) {
+			for (let j = subgridCol; j < subgridCol + subgridSize; j++) {
+				if (board[i][j] === value) return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static getValidValues(
+		board: number[][],
+		row: number,
+		col: number,
+	): number[] {
+		const values: number[] = Array.from(
+			{ length: board.length },
+			(_, i) => i + 1,
+		);
+
+		for (const value of values) {
+			if (!BoardGenerator.isValid(board, row, col, value)) {
+				values.splice(values.indexOf(value), 1);
+			}
+		}
+
+		return values;
+	}
+
+	private static findNextEmpty(board: number[][]): {
+		row: number;
+		col: number;
+	} {
+		for (let row = 0; row < board.length; row++) {
+			for (let col = 0; col < board.length; col++) {
+				if (board[row][col] === 0) return { row, col };
+			}
+		}
+		return { row: -1, col: -1 };
+	}
+
+	public static solve(board: number[][]): boolean {
+		if (board.every((row) => row.every((v) => v !== 0))) return true;
+
+		const { row, col } = BoardGenerator.findNextEmpty(board);
+		if (row === -1 && col === -1) return false;
+
+		const candidates = BoardGenerator.getValidValues(board, row, col);
+		BoardGenerator.shuffle(candidates);
+
+		for (const value of candidates) {
+			if (!BoardGenerator.isValid(board, row, col, value)) continue;
+
+			board[row][col] = value;
+
+			if (BoardGenerator.solve(board)) return true;
+			board[row][col] = 0;
+		}
+
+		return false;
+	}
 }
+
+process.on('message', ({ board }: { board: number[][] }) => {
+	const solvedBoard = BoardGenerator.solve(board);
+	if (solvedBoard) process.send?.(board);
+});
