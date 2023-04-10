@@ -276,7 +276,7 @@ export default class {
 	private printLoadedGame(previousGame: PreviousParsedGame) {
 		const table = Table.format(
 			previousGame.history.current.map((row) =>
-				`${row}`.split('').map((n) => parseInt(n)),
+				`${row}`.split(',').map((n) => parseInt(n)),
 			),
 			previousGame.initialBoard,
 			false,

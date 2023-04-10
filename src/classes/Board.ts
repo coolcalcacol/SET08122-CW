@@ -25,7 +25,7 @@ export default class Board {
 		difficulty: Difficulty | 'custom',
 	) {
 		this.history = new HistoryTree<string[]>(
-			board.map((row) => row.join('')),
+			board.map((row) => row.join(',')),
 		);
 		this.initialBoard = JSON.parse(JSON.stringify(board));
 		this.generator = boardGenerator;
@@ -34,7 +34,7 @@ export default class Board {
 
 	get currentBoard(): number[][] {
 		return this.history.current.map((row) =>
-			`${row}`.split('').map((n) => parseInt(n)),
+			`${row}`.split(',').map((n) => parseInt(n)),
 		);
 	}
 
@@ -49,7 +49,7 @@ export default class Board {
 	public move = (i: number, j: number, num: number): void => {
 		const board = this.currentBoard;
 		board[i][j] = num;
-		this.history.addChild(board.map((row) => row.join('')));
+		this.history.addChild(board.map((row) => row.join(',')));
 	};
 
 	public undo = (): boolean => this.history.undo();
