@@ -245,18 +245,20 @@ export default class {
 			if (data === 'exit') {
 				this.resetCursor(failedAttempts, table.length);
 				rl.close();
-			} else if (data === 'next') {
-				// go to next move
-				previousGame.history.redo();
-				this.resetCursor(failedAttempts, table.length);
-				this.printLoadedGame(previousGame);
-				rl.prompt();
-			} else if (data === 'prev') {
-				// go to previous move
-				previousGame.history.undo();
-				this.resetCursor(failedAttempts, table.length);
-				this.printLoadedGame(previousGame);
-				rl.prompt();
+			} else if (data === 'next' || data === 'prev') {
+				const mode = data === 'next' ? 'redo' : 'undo';
+
+				if (previousGame.history[mode]()) {
+					this.resetCursor(failedAttempts, table.length);
+					this.printLoadedGame(previousGame);
+					rl.prompt();
+				} else {
+					failedAttempts = this.badAttempt(
+						rl,
+						`Cannot ${mode} any further`,
+						failedAttempts,
+					);
+				}
 			} else {
 				failedAttempts = this.badAttempt(
 					rl,
