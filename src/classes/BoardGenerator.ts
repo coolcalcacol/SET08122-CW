@@ -1,14 +1,10 @@
 /** @format */
 
 import { fork, ChildProcess } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { cpus } from 'os';
 
 import { Difficulty } from './Sudoku.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 export default class BoardGenerator {
 	private readonly size: number;
