@@ -48,6 +48,7 @@ export default class {
 	private currentBoard?: Board;
 	constructor() {
 		this.readFolder();
+		this.resetCursor(100, 100);
 		this.displayWelcome().then(() => {
 			return;
 		});
@@ -94,7 +95,6 @@ export default class {
 	}
 
 	private async displayWelcome() {
-		this.resetCursor(100, 100);
 		const menu = new SelectMenu(Table.formatWelcomeMessage());
 		const mode = await new Promise<0 | 1 | 2>((resolve) =>
 			menu.on('select', (mode) => resolve(mode)),
