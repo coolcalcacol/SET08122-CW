@@ -1,7 +1,6 @@
 /** @format */
 
 import { fork, ChildProcess } from 'child_process';
-import { join } from 'path';
 import { cpus } from 'os';
 
 import { Difficulty } from './Sudoku.js';
@@ -42,7 +41,7 @@ export default class BoardGenerator {
 		const numProcesses = cpus().length / 2;
 
 		for (let i = 0; i < numProcesses; i++)
-			childPool.push(fork(join(__dirname, 'BoardGenerator.js')));
+			childPool.push(fork(__filename, ['child']));
 
 		const killChildren = () => {
 			for (const child of childPool) child.kill();
