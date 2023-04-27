@@ -22,7 +22,6 @@
         "start:windows": "./dist/sudoku/bundle-win.exe",
         "start:linux": "./dist/sudoku/bundle-linux",
         "start:macos": "./dist/sudoku/bundle-macos",
-        "start:dev": "yarn build && node ./dist/esm/index.js",
         "start:bundled": "yarn build && yarn compile && node ./dist/bundle.cjs",
         "lint": "eslint src/ --ext .ts",
         "lint:fix": "eslint src/ --ext .ts --fix",
@@ -33,11 +32,11 @@
         "@types/node": "18.14.6",
         "@typescript-eslint/eslint-plugin": "5.54.0",
         "@typescript-eslint/parser": "5.54.0",
-        "esbuild": "0.17.14",
-        "eslint": "8.35.0",
-        "eslint-config-prettier": "8.6.0",
-        "pkg": "5.8.0",
-        "prettier": "2.8.4",
-        "typescript": "4.9.5"
+        "esbuild": "0.17.18",
+        "eslint": "8.39.0",
+        "eslint-config-prettier": "8.8.0",
+        "pkg": "5.8.1",
+        "prettier": "2.8.8",
+        "typescript": "5.0.4"
     }
 }
