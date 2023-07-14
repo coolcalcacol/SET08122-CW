@@ -525,7 +525,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ignore", "npm:5.2.4"],\
             ["natural-compare-lite", "npm:1.4.0"],\
             ["regexpp", "npm:3.2.0"],\
-            ["semver", "npm:7.3.8"],\
+            ["semver", "npm:7.5.4"],\
             ["tsutils", "virtual:36afa9c9d4b31da8d2ae64c807c01ad65b64ef909cf089e4343433b5575231d382d013bb21ad586a45e723c9dc1a983098709ac354838b5cf151dc9ac7690fdc#npm:3.21.0"],\
             ["typescript", "patch:typescript@npm%3A5.0.4#~builtin<compat/typescript>::version=5.0.4&hash=85af82"]\
           ],\
@@ -638,7 +638,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["debug", "virtual:d308674d86394045a3178d86fc0909ad49c0ac9801ba12776e517bdaf3dfe3537e24a9c79fd8f2bd15e4a7d8be7fae6252874fd98e2dbd2728333f46ec685014#npm:4.3.4"],\
             ["globby", "npm:11.1.0"],\
             ["is-glob", "npm:4.0.3"],\
-            ["semver", "npm:7.3.8"],\
+            ["semver", "npm:7.5.4"],\
             ["tsutils", "virtual:36afa9c9d4b31da8d2ae64c807c01ad65b64ef909cf089e4343433b5575231d382d013bb21ad586a45e723c9dc1a983098709ac354838b5cf151dc9ac7690fdc#npm:3.21.0"],\
             ["typescript", "patch:typescript@npm%3A5.0.4#~builtin<compat/typescript>::version=5.0.4&hash=85af82"]\
           ],\
@@ -658,7 +658,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["debug", "virtual:d308674d86394045a3178d86fc0909ad49c0ac9801ba12776e517bdaf3dfe3537e24a9c79fd8f2bd15e4a7d8be7fae6252874fd98e2dbd2728333f46ec685014#npm:4.3.4"],\
             ["globby", "npm:11.1.0"],\
             ["is-glob", "npm:4.0.3"],\
-            ["semver", "npm:7.3.8"],\
+            ["semver", "npm:7.5.4"],\
             ["tsutils", "virtual:74b008815e4c1cb5de4d8f0f41397d3e2ee85615c7d6c65e03faed169e6b45e006b626e4404a20b578bf53b1c570b6513b9b535bfa37b00bb391ed82b4055eed#npm:3.21.0"],\
             ["typescript", null]\
           ],\
@@ -690,7 +690,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["eslint", "npm:8.39.0"],\
             ["eslint-scope", "npm:5.1.1"],\
             ["eslint-utils", "virtual:dbc386d0c99381ced6d8335e6f4e404b22e570544b58099b5c9926e47fc0c0f90e3b054e90cfe365dd7cb399a14fa140cf07790540ce07d59d2354882cfa5383#npm:3.0.0"],\
-            ["semver", "npm:7.3.8"]\
+            ["semver", "npm:7.5.4"]\
           ],\
           "packagePeers": [\
             "@types/eslint",\
@@ -1963,7 +1963,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/node-abi-npm-3.40.0-d2899e4357-8f4ef0d9ac.zip/node_modules/node-abi/",\
           "packageDependencies": [\
             ["node-abi", "npm:3.40.0"],\
-            ["semver", "npm:7.3.8"]\
+            ["semver", "npm:7.5.4"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -2155,7 +2155,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["https-proxy-agent", "npm:5.0.1"],\
             ["node-fetch", "virtual:2669e3068cd23dc7f31f28a5d44a44d14458bdd469167d6f92799139b15269a09ed15386788e24bb8dcb5ec8b3239ef2cdfc45bb4156fe322882121a58c1b5a6#npm:2.6.9"],\
             ["progress", "npm:2.0.3"],\
-            ["semver", "npm:7.3.8"],\
+            ["semver", "npm:7.5.4"],\
             ["tar-fs", "npm:2.1.1"],\
             ["yargs", "npm:16.2.0"]\
           ],\
@@ -2381,10 +2381,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["semver", [\
-        ["npm:7.3.8", {\
-          "packageLocation": "./.yarn/cache/semver-npm-7.3.8-25a996cb4f-ba9c7cbbf2.zip/node_modules/semver/",\
+        ["npm:7.5.4", {\
+          "packageLocation": "./.yarn/cache/semver-npm-7.5.4-c4ad957fcd-12d8ad952f.zip/node_modules/semver/",\
           "packageDependencies": [\
-            ["semver", "npm:7.3.8"],\
+            ["semver", "npm:7.5.4"],\
             ["lru-cache", "npm:6.0.0"]\
           ],\
           "linkType": "HARD"\
